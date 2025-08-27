@@ -12,6 +12,9 @@ import HalTransaksi from "../components/HalTransaksi";
 import TransaksiPiutang from "../components/TransaksiPiutang";
 import LapBarangReturn from "../components/LapBarangReturn";
 import LapBarangLaku from "../components/LapBarangLaku";
+import LaporanTransaksiHarianPage from "../components/LapTransaksiHarian";
+import LaporanTransaksiBulananPage from "../components/LapTransaksiBulanan";
+import LaporanTransaksiUniqueIdPage from "../components/LapTransaksiUniqueID";
 
 // Placeholder components
 const DashboardOverview = () => (
@@ -21,18 +24,6 @@ const DashboardOverview = () => (
   </div>
 );
 
-const LapTransaksiHarian = () => (
-  <div className="p-6">
-    <h2 className="text-2xl font-bold">Laporan Transaksi Harian</h2>
-    <p>Daily transaction reports will be implemented here.</p>
-  </div>
-);
-const LapTransaksiBulanan = () => (
-  <div className="p-6">
-    <h2 className="text-2xl font-bold">Laporan Transaksi Bulanan</h2>
-    <p>Monthly transaction reports will be implemented here.</p>
-  </div>
-);
 const LapHutang = () => (
   <div className="p-6">
     <h2 className="text-2xl font-bold">Laporan Hutang</h2>
@@ -55,12 +46,6 @@ const LapBonusPoint = () => (
   <div className="p-6">
     <h2 className="text-2xl font-bold">Laporan Bonus Point</h2>
     <p>Bonus point reports will be implemented here.</p>
-  </div>
-);
-const LapTransaksiUniqueID = () => (
-  <div className="p-6">
-    <h2 className="text-2xl font-bold">Laporan Transaksi Unique ID</h2>
-    <p>Unique ID transaction reports will be implemented here.</p>
   </div>
 );
 
@@ -281,9 +266,9 @@ const Dashboard = () => {
 
       // Category Laporan
       case "lap-transaksi-harian":
-        return <LapTransaksiHarian />;
+        return <LaporanTransaksiHarianPage />;
       case "lap-transaksi-bulanan":
-        return <LapTransaksiBulanan />;
+        return <LaporanTransaksiBulananPage />;
       case "lap-hutang":
         return <LapHutang />;
       case "lap-piutang":
@@ -293,7 +278,7 @@ const Dashboard = () => {
       case "lap-bonus-point":
         return <LapBonusPoint />;
       case "lap-transaksi-unique-id":
-        return <LapTransaksiUniqueID />;
+        return <LaporanTransaksiUniqueIdPage />;
       case "lap-barang-return":
         return <LapBarangReturn />;
       case "lap-barang-laku":

@@ -225,6 +225,7 @@ const LaporanPerformaPenjualanPage: React.FC = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
   const [showFilters, setShowFilters] = useState(false);
+  const [apiStatus, setApiStatus] = useState<string>("");
 
   useEffect(() => {
     loadCategories();
@@ -241,11 +242,25 @@ const LaporanPerformaPenjualanPage: React.FC = () => {
       });
 
       if (response.ok) {
-        const result = await response.json();
-        setCategories(result.data || []);
+        const contentType = response.headers.get("content-type");
+        if (contentType && contentType.includes("application/json")) {
+          const result = await response.json();
+          setCategories(result.data || []);
+          setApiStatus("API Connected");
+        } else {
+          console.log("Categories API not available, using empty data");
+          setCategories([]);
+          setApiStatus("API Not Available - Demo Mode");
+        }
+      } else {
+        console.log("Categories API endpoint not found");
+        setCategories([]);
+        setApiStatus("API Not Available - Demo Mode");
       }
     } catch (error) {
       console.error("Error loading categories:", error);
+      setCategories([]);
+      setApiStatus("API Not Available - Demo Mode");
     }
   };
 
@@ -258,11 +273,21 @@ const LaporanPerformaPenjualanPage: React.FC = () => {
       });
 
       if (response.ok) {
-        const result = await response.json();
-        setSuppliers(result.data || []);
+        const contentType = response.headers.get("content-type");
+        if (contentType && contentType.includes("application/json")) {
+          const result = await response.json();
+          setSuppliers(result.data || []);
+        } else {
+          console.log("Suppliers API not available, using empty data");
+          setSuppliers([]);
+        }
+      } else {
+        console.log("Suppliers API endpoint not found");
+        setSuppliers([]);
       }
     } catch (error) {
       console.error("Error loading suppliers:", error);
+      setSuppliers([]);
     }
   };
 
@@ -292,18 +317,90 @@ const LaporanPerformaPenjualanPage: React.FC = () => {
       });
 
       if (response.ok) {
-        const result = await response.json();
-        setSalesItems(result.data || []);
-        setPagination(result.pagination || pagination);
-        setSummary(result.summary || summary);
-        setPeriods(result.periods || periods);
+        const contentType = response.headers.get("content-type");
+        if (contentType && contentType.includes("application/json")) {
+          const result = await response.json();
+          setSalesItems(result.data || []);
+          setPagination(result.pagination || pagination);
+          setSummary(result.summary || summary);
+          setPeriods(result.periods || periods);
+        } else {
+          console.log("Sales performance API not available, using empty data");
+          setSalesItems([]);
+          // Set default empty values
+          setPagination({
+            currentPage: 1,
+            totalPages: 1,
+            totalItems: 0,
+            itemsPerPage: 50,
+          });
+          setSummary({
+            totalItems: 0,
+            totalRevenue: 0,
+            totalProfit: 0,
+            averageProfitMargin: 0,
+            bestSellingCount: 0,
+            slowMovingCount: 0,
+            stockValue: 0,
+            deadStockValue: 0,
+          });
+          setPeriods({
+            startDate: "",
+            endDate: "",
+            totalDays: 0,
+          });
+        }
       } else {
-        const error = await response.json();
-        alert(`Error: ${error.message || "Gagal memuat data"}`);
+        console.log("Sales performance API endpoint not found");
+        setSalesItems([]);
+        // Set default empty values
+        setPagination({
+          currentPage: 1,
+          totalPages: 1,
+          totalItems: 0,
+          itemsPerPage: 50,
+        });
+        setSummary({
+          totalItems: 0,
+          totalRevenue: 0,
+          totalProfit: 0,
+          averageProfitMargin: 0,
+          bestSellingCount: 0,
+          slowMovingCount: 0,
+          stockValue: 0,
+          deadStockValue: 0,
+        });
+        setPeriods({
+          startDate: "",
+          endDate: "",
+          totalDays: 0,
+        });
       }
     } catch (error) {
       console.error("Error loading sales performance:", error);
-      alert("Terjadi kesalahan saat memuat data");
+      setSalesItems([]);
+      // Set default empty values on error
+      setPagination({
+        currentPage: 1,
+        totalPages: 1,
+        totalItems: 0,
+        itemsPerPage: 50,
+      });
+      setSummary({
+        totalItems: 0,
+        totalRevenue: 0,
+        totalProfit: 0,
+        averageProfitMargin: 0,
+        bestSellingCount: 0,
+        slowMovingCount: 0,
+        stockValue: 0,
+        deadStockValue: 0,
+      });
+      setPeriods({
+        startDate: "",
+        endDate: "",
+        totalDays: 0,
+      });
     } finally {
       setIsLoading(false);
     }
@@ -375,24 +472,30 @@ const LaporanPerformaPenjualanPage: React.FC = () => {
       });
 
       if (response.ok) {
-        const blob = await response.blob();
-        const url = window.URL.createObjectURL(blob);
-        const a = document.createElement("a");
-        a.style.display = "none";
-        a.href = url;
-        a.download = `laporan-performa-penjualan-${new Date().getTime()}.csv`;
-        document.body.appendChild(a);
-        a.click();
-        window.URL.revokeObjectURL(url);
-        document.body.removeChild(a);
-        alert("File CSV berhasil didownload!");
+        const contentType = response.headers.get("content-type");
+        if (contentType && (contentType.includes("text/csv") || contentType.includes("application/octet-stream"))) {
+          const blob = await response.blob();
+          const url = window.URL.createObjectURL(blob);
+          const a = document.createElement("a");
+          a.style.display = "none";
+          a.href = url;
+          a.download = `laporan-performa-penjualan-${new Date().getTime()}.csv`;
+          document.body.appendChild(a);
+          a.click();
+          window.URL.revokeObjectURL(url);
+          document.body.removeChild(a);
+          alert("File CSV berhasil didownload!");
+        } else {
+          console.log("Export API not available - CSV export not supported");
+          alert("Fitur export CSV tidak tersedia karena API belum terpasang");
+        }
       } else {
-        const error = await response.json();
-        alert(`Error: ${error.message || "Gagal mengekspor data"}`);
+        console.log("Export API endpoint not found");
+        alert("Fitur export CSV tidak tersedia karena API belum terpasang");
       }
     } catch (error) {
       console.error("Error exporting data:", error);
-      alert("Terjadi kesalahan saat mengekspor data");
+      alert("Fitur export CSV tidak tersedia karena API belum terpasang");
     } finally {
       setIsExporting(false);
     }
@@ -450,6 +553,7 @@ const LaporanPerformaPenjualanPage: React.FC = () => {
                     Periode: {new Date(periods.startDate).toLocaleDateString("id-ID")} - {new Date(periods.endDate).toLocaleDateString("id-ID")} ({periods.totalDays} hari)
                   </p>
                 )}
+                {apiStatus && <p className={`text-xs mt-1 ${apiStatus.includes("Not Available") ? "text-orange-600" : "text-green-600"}`}>Status: {apiStatus}</p>}
               </div>
               <div className="flex gap-3">
                 <button
@@ -465,7 +569,7 @@ const LaporanPerformaPenjualanPage: React.FC = () => {
                   className="px-4 py-2 text-gray-700 border border-gray-300 rounded-md hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 flex items-center gap-2 disabled:opacity-50"
                 >
                   <RefreshCw className={`w-4 h-4 ${isLoading ? "animate-spin" : ""}`} />
-                  Refresh
+                  Muat Ulang
                 </button>
                 <button
                   onClick={exportToCSV}
@@ -722,7 +826,14 @@ const LaporanPerformaPenjualanPage: React.FC = () => {
                 ) : salesItems.length === 0 ? (
                   <tr>
                     <td colSpan={10} className="px-4 py-8 text-center text-gray-500">
-                      Tidak ada data performa penjualan
+                      {apiStatus.includes("Not Available") ? (
+                        <div className="space-y-2">
+                          <p>Tidak ada data - API backend belum tersedia</p>
+                          <p className="text-xs text-orange-600">Silakan implementasikan API endpoints untuk melihat data lengkap</p>
+                        </div>
+                      ) : (
+                        "Tidak ada data performa penjualan"
+                      )}
                     </td>
                   </tr>
                 ) : (
@@ -824,10 +935,10 @@ const LaporanPerformaPenjualanPage: React.FC = () => {
 
           {/* Performance Insights */}
           <div className="px-6 py-4 bg-blue-50 border-t border-gray-200">
-            <h3 className="text-sm font-medium text-gray-800 mb-3">💡 Insight Performa</h3>
+            <h3 className="text-sm font-medium text-gray-800 mb-3">Insight Performa</h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
               <div>
-                <h4 className="font-medium text-gray-700 mb-2">📈 Barang Paling Laku:</h4>
+                <h4 className="font-medium text-gray-700 mb-2">Barang Paling Laku:</h4>
                 <ul className="text-gray-600 space-y-1">
                   <li>• Frekuensi penjualan {">"}1 unit/hari</li>
                   <li>• Stock turnover tinggi</li>
@@ -835,7 +946,7 @@ const LaporanPerformaPenjualanPage: React.FC = () => {
                 </ul>
               </div>
               <div>
-                <h4 className="font-medium text-gray-700 mb-2">📉 Barang Kurang Laku:</h4>
+                <h4 className="font-medium text-gray-700 mb-2">Barang Kurang Laku:</h4>
                 <ul className="text-gray-600 space-y-1">
                   <li>• Lebih dari 30 hari tanpa penjualan</li>
                   <li>• Overstock berpotensi jadi dead stock</li>
