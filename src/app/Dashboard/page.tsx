@@ -15,6 +15,10 @@ import LapBarangLaku from "../components/LapBarangLaku";
 import LaporanTransaksiHarianPage from "../components/LapTransaksiHarian";
 import LaporanTransaksiBulananPage from "../components/LapTransaksiBulanan";
 import LaporanTransaksiUniqueIdPage from "../components/LapTransaksiUniqueID";
+import LaporanJenisPembelianPage from "../components/LapJenisPembelian";
+import LaporanHutangSupplierPage from "../components/LapHutang";
+import LaporanPiutangAnggotaPage from "../components/LapPiutang";
+import LaporanBonusPointPage from "../components/LapBonusPoint";
 
 // Placeholder components
 const DashboardOverview = () => (
@@ -24,24 +28,6 @@ const DashboardOverview = () => (
   </div>
 );
 
-const LapHutang = () => (
-  <div className="p-6">
-    <h2 className="text-2xl font-bold">Laporan Hutang</h2>
-    <p>Debt reports will be implemented here.</p>
-  </div>
-);
-const LapPiutang = () => (
-  <div className="p-6">
-    <h2 className="text-2xl font-bold">Laporan Piutang</h2>
-    <p>Receivables reports will be implemented here.</p>
-  </div>
-);
-const LapJenisPembelian = () => (
-  <div className="p-6">
-    <h2 className="text-2xl font-bold">Laporan Jenis Pembelian</h2>
-    <p>Purchase type reports will be implemented here.</p>
-  </div>
-);
 const LapBonusPoint = () => (
   <div className="p-6">
     <h2 className="text-2xl font-bold">Laporan Bonus Point</h2>
@@ -270,13 +256,13 @@ const Dashboard = () => {
       case "lap-transaksi-bulanan":
         return <LaporanTransaksiBulananPage />;
       case "lap-hutang":
-        return <LapHutang />;
+        return <LaporanHutangSupplierPage />;
       case "lap-piutang":
-        return <LapPiutang />;
+        return <LaporanPiutangAnggotaPage />;
       case "lap-jenis-pembelian":
-        return <LapJenisPembelian />;
+        return <LaporanJenisPembelianPage />;
       case "lap-bonus-point":
-        return <LapBonusPoint />;
+        return <LaporanBonusPointPage />;
       case "lap-transaksi-unique-id":
         return <LaporanTransaksiUniqueIdPage />;
       case "lap-barang-return":

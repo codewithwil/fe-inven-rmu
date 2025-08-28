@@ -1,97 +1,3 @@
-/*
-API ENDPOINTS DOCUMENTATION FOR BACKEND IMPLEMENTATION:
-
-1. GET /api/member-transactions
-   Description: Get transaction data grouped by member unique-id with regional filtering
-   Headers: Authorization: Bearer {token}
-   Query Parameters:
-   - wilayah: string (optional) - Filter by region code (BDG, KBG, etc.)
-   - startDate: string (YYYY-MM-DD) (optional)
-   - endDate: string (YYYY-MM-DD) (optional)
-   - uniqueId: string (optional) - Search specific member ID
-   - transactionType: "all" | "purchase" | "payment" | "refund" (optional, default: "all")
-   - minAmount: number (optional)
-   - maxAmount: number (optional)
-   - sortBy: "uniqueId" | "totalTransactions" | "totalAmount" | "lastTransaction" (optional, default: "totalTransactions")
-   - sortOrder: "asc" | "desc" (optional, default: "desc")
-   - page: number (optional, default: 1)
-   - pageSize: number (optional, default: 50)
-   
-   Response: {
-     data: [
-       {
-         uniqueId: string,
-         memberName: string,
-         wilayah: string,
-         wilayahName: string,
-         phoneNumber: string,
-         totalTransactions: number,
-         totalAmount: number,
-         totalPurchaseAmount: number,
-         totalPaymentAmount: number,
-         totalRefundAmount: number,
-         firstTransactionDate: string,
-         lastTransactionDate: string,
-         averageTransactionAmount: number,
-         monthlyTransactionCount: number,
-         transactions: [
-           {
-             id: string,
-             transactionDate: string,
-             transactionType: string,
-             amount: number,
-             description: string,
-             status: string
-           }
-         ]
-       }
-     ],
-     pagination: {
-       currentPage: number,
-       totalPages: number,
-       totalItems: number,
-       itemsPerPage: number
-     },
-     summary: {
-       totalMembers: number,
-       totalTransactions: number,
-       totalAmount: number,
-       averageTransactionPerMember: number,
-       regionalDistribution: {
-         [wilayah: string]: {
-           memberCount: number,
-           transactionCount: number,
-           totalAmount: number
-         }
-       }
-     }
-   }
-
-2. GET /api/member-transactions/export
-   Description: Export member transaction data to CSV
-   Headers: Authorization: Bearer {token}
-   Query Parameters: Same as above
-   Response: CSV file download
-
-3. GET /api/regions
-   Description: Get list of available regions
-   Headers: Authorization: Bearer {token}
-   Response: {
-     data: [
-       {
-         code: string,
-         name: string,
-         memberCount: number
-       }
-     ]
-   }
-
-ERROR RESPONSES:
-- 400: Invalid filter parameters
-- 401: Unauthorized (invalid token)
-- 500: Server error
-*/
-
 "use client";
 
 import React, { useState, useEffect } from "react";
@@ -224,8 +130,18 @@ const LaporanTransaksiUniqueIdPage: React.FC = () => {
             { code: "KBT", name: "Kabupaten Bandung Timur", memberCount: 0 },
             { code: "CMH", name: "Cimahi", memberCount: 0 },
             { code: "GRT", name: "Garut", memberCount: 0 },
+            { code: "KGU", name: "Kabupaten Garut Utara", memberCount: 0 },
+            { code: "KGS", name: "Kabupaten Garut Selatan", memberCount: 0 },
             { code: "SMD", name: "Sumedang", memberCount: 0 },
             { code: "TSM", name: "Tasikmalaya", memberCount: 0 },
+            { code: "SMI", name: "Kota Sukabumi", memberCount: 0 },
+            { code: "KSI", name: "Kabupaten Sukabumi", memberCount: 0 },
+            { code: "KSU", name: "Kabupaten Sukabumi Utara", memberCount: 0 },
+            { code: "CJR", name: "Cianjur", memberCount: 0 },
+            { code: "BGR", name: "Bogor", memberCount: 0 },
+            { code: "KBR", name: "Kabupaten Bogor", memberCount: 0 },
+            { code: "YMG", name: "Yamughni", memberCount: 0 },
+            { code: "PMB", name: "Pembina", memberCount: 0 },
           ]);
           setApiStatus("API Not Available - Demo Mode");
         }
@@ -238,8 +154,18 @@ const LaporanTransaksiUniqueIdPage: React.FC = () => {
           { code: "KBT", name: "Kabupaten Bandung Timur", memberCount: 0 },
           { code: "CMH", name: "Cimahi", memberCount: 0 },
           { code: "GRT", name: "Garut", memberCount: 0 },
+          { code: "KGU", name: "Kabupaten Garut Utara", memberCount: 0 },
+          { code: "KGS", name: "Kabupaten Garut Selatan", memberCount: 0 },
           { code: "SMD", name: "Sumedang", memberCount: 0 },
           { code: "TSM", name: "Tasikmalaya", memberCount: 0 },
+          { code: "SMI", name: "Kota Sukabumi", memberCount: 0 },
+          { code: "KSI", name: "Kabupaten Sukabumi", memberCount: 0 },
+          { code: "KSU", name: "Kabupaten Sukabumi Utara", memberCount: 0 },
+          { code: "CJR", name: "Cianjur", memberCount: 0 },
+          { code: "BGR", name: "Bogor", memberCount: 0 },
+          { code: "KBR", name: "Kabupaten Bogor", memberCount: 0 },
+          { code: "YMG", name: "Yamughni", memberCount: 0 },
+          { code: "PMB", name: "Pembina", memberCount: 0 },
         ]);
         setApiStatus("API Not Available - Demo Mode");
       }
@@ -252,8 +178,18 @@ const LaporanTransaksiUniqueIdPage: React.FC = () => {
         { code: "KBT", name: "Kabupaten Bandung Timur", memberCount: 0 },
         { code: "CMH", name: "Cimahi", memberCount: 0 },
         { code: "GRT", name: "Garut", memberCount: 0 },
+        { code: "KGU", name: "Kabupaten Garut Utara", memberCount: 0 },
+        { code: "KGS", name: "Kabupaten Garut Selatan", memberCount: 0 },
         { code: "SMD", name: "Sumedang", memberCount: 0 },
         { code: "TSM", name: "Tasikmalaya", memberCount: 0 },
+        { code: "SMI", name: "Kota Sukabumi", memberCount: 0 },
+        { code: "KSI", name: "Kabupaten Sukabumi", memberCount: 0 },
+        { code: "KSU", name: "Kabupaten Sukabumi Utara", memberCount: 0 },
+        { code: "CJR", name: "Cianjur", memberCount: 0 },
+        { code: "BGR", name: "Bogor", memberCount: 0 },
+        { code: "KBR", name: "Kabupaten Bogor", memberCount: 0 },
+        { code: "YMG", name: "Yamughni", memberCount: 0 },
+        { code: "PMB", name: "Pembina", memberCount: 0 },
       ]);
       setApiStatus("API Not Available - Demo Mode");
     }
@@ -488,7 +424,7 @@ const LaporanTransaksiUniqueIdPage: React.FC = () => {
             <div className="flex justify-between items-center">
               <div>
                 <h2 className="text-xl font-semibold text-gray-800">Laporan Transaksi Per Unique ID</h2>
-                <p className="text-sm text-gray-600 mt-1">Kontrol transaksi anggota berdasarkan wilayah dan unique ID</p>
+                <p className="text-sm text-gray-600 mt-1">Laporan transaksi anggota berdasarkan wilayah (kode wilayah menjadi prefix unique ID)</p>
                 {filters.startDate && filters.endDate && (
                   <p className="text-xs text-blue-600 mt-1">
                     Periode: {new Date(filters.startDate).toLocaleDateString("id-ID")} - {new Date(filters.endDate).toLocaleDateString("id-ID")}
@@ -547,12 +483,11 @@ const LaporanTransaksiUniqueIdPage: React.FC = () => {
 
                 {/* Unique ID */}
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Unique ID</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Unique ID (Wilayah-Nomor)</label>
                   <input
-                    type="text"
+                    placeholder="Format: BDG-0001, KBG-0002, dll"
                     value={filters.uniqueId}
                     onChange={(e) => handleFilterChange("uniqueId", e.target.value)}
-                    placeholder="Cari by Unique ID (ex: BDG-0001)"
                     className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-black text-sm"
                   />
                 </div>
@@ -626,7 +561,7 @@ const LaporanTransaksiUniqueIdPage: React.FC = () => {
                     onChange={(e) => handleFilterChange("sortBy", e.target.value)}
                     className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-black text-sm"
                   >
-                    <option value="uniqueId">Unique ID</option>
+                    <option value="uniqueId">Wilayah & ID (A-Z)</option>
                     <option value="totalTransactions">Total Transaksi</option>
                     <option value="totalAmount">Total Nilai</option>
                     <option value="lastTransaction">Transaksi Terakhir</option>
@@ -730,8 +665,8 @@ const LaporanTransaksiUniqueIdPage: React.FC = () => {
             <table className="w-full">
               <thead className="bg-gray-50">
                 <tr>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Unique ID / Anggota</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Wilayah</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Wilayah / Unique ID</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Anggota</th>
                   <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Total Transaksi</th>
                   <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Total Nilai</th>
                   <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Rata-rata</th>
@@ -772,18 +707,18 @@ const LaporanTransaksiUniqueIdPage: React.FC = () => {
                       <React.Fragment key={member.uniqueId}>
                         <tr className="hover:bg-gray-50">
                           <td className="px-4 py-3">
-                            <div className="text-sm font-medium text-black">{member.uniqueId}</div>
-                            <div className="text-sm text-gray-900">{member.memberName}</div>
-                            <div className="text-xs text-gray-500">{member.phoneNumber}</div>
-                          </td>
-                          <td className="px-4 py-3">
                             <div className="flex items-center">
-                              <MapPin className="w-4 h-4 text-blue-500 mr-1" />
+                              <MapPin className="w-5 h-5 text-blue-500 mr-2" />
                               <div>
-                                <div className="text-sm font-medium text-black">{member.wilayah}</div>
+                                <div className="text-sm font-bold text-blue-600">{member.wilayah}</div>
                                 <div className="text-xs text-gray-500">{member.wilayahName}</div>
+                                <div className="text-sm font-medium text-black mt-1">{member.uniqueId}</div>
                               </div>
                             </div>
+                          </td>
+                          <td className="px-4 py-3">
+                            <div className="text-sm font-medium text-black">{member.memberName}</div>
+                            <div className="text-xs text-gray-500">{member.phoneNumber}</div>
                           </td>
                           <td className="px-4 py-3">
                             <div className="text-sm font-medium text-black">{member.totalTransactions}</div>
