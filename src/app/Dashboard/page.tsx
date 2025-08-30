@@ -7,8 +7,10 @@ import { useRouter } from "next/navigation";
 // For now, we'll create placeholder components to avoid import errors
 
 import InputBarang from "../components/InputBarang";
+import InputSupplier from "../components/InputSupplier";
 import ReturnBarang from "../components/ReturnBarang";
 import HalTransaksi from "../components/HalTransaksi";
+import StokBarang from "../components/stok-barang";
 import TransaksiPiutang from "../components/TransaksiPiutang";
 import LapBarangReturn from "../components/LapBarangReturn";
 import LapBarangLaku from "../components/LapBarangLaku";
@@ -28,13 +30,6 @@ const DashboardOverview = () => (
   </div>
 );
 
-const LapBonusPoint = () => (
-  <div className="p-6">
-    <h2 className="text-2xl font-bold">Laporan Bonus Point</h2>
-    <p>Bonus point reports will be implemented here.</p>
-  </div>
-);
-
 const Settings = () => (
   <div className="p-6">
     <h2 className="text-2xl font-bold">Settings</h2>
@@ -51,9 +46,11 @@ interface User {
 type MenuItemId =
   | "dashboard"
   | "input-barang"
+  | "input-supplier"
   | "return-barang"
   | "hal-transaksi"
   | "transaksi-piutang"
+  | "stok-barang"
   | "lap-barang-return"
   | "lap-barang-laku"
   | "lap-transaksi-harian"
@@ -130,6 +127,18 @@ const Dashboard = () => {
           icon: <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />,
         },
         {
+          id: "input-supplier" as MenuItemId,
+          label: "Input Supplier",
+          icon: (
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"
+            />
+          ),
+        },
+        {
           id: "return-barang" as MenuItemId,
           label: "Return Barang",
           icon: <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6" />,
@@ -150,6 +159,18 @@ const Dashboard = () => {
           id: "transaksi-piutang" as MenuItemId,
           label: "Transaksi Piutang",
           icon: <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z" />,
+        },
+        {
+          id: "stok-barang" as MenuItemId,
+          label: "Stok Barang",
+          icon: (
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M7 4V2a1 1 0 011-1h8a1 1 0 011 1v2m0 0V1a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 01-1 1h-2a1 1 0 01-1-1V4m-9 0H4a1 1 0 00-1 1v10a1 1 0 001 1h2m9-12v8a2 2 0 01-2 2H9a2 2 0 01-2-2V4m8 0H8m0 0v8a1 1 0 001 1h6a1 1 0 001-1V4"
+            />
+          ),
         },
       ],
     },
@@ -241,6 +262,8 @@ const Dashboard = () => {
       // Category Barang
       case "input-barang":
         return <InputBarang />;
+      case "input-supplier":
+        return <InputSupplier />;
       case "return-barang":
         return <ReturnBarang />;
 
@@ -249,6 +272,8 @@ const Dashboard = () => {
         return <HalTransaksi />;
       case "transaksi-piutang":
         return <TransaksiPiutang />;
+      case "stok-barang":
+        return <StokBarang />;
 
       // Category Laporan
       case "lap-transaksi-harian":
@@ -283,9 +308,11 @@ const Dashboard = () => {
     const descriptions: Record<MenuItemId, string> = {
       dashboard: "Overview of your business performance",
       "input-barang": "Add new items to inventory",
+      "input-supplier": "Manage supplier information and data",
       "return-barang": "Process returned items",
       "hal-transaksi": "Process sales transactions and print receipts",
       "transaksi-piutang": "Process receivables transactions",
+      "stok-barang": "Monitor and manage inventory stock levels",
       "lap-barang-return": "View returned items reports",
       "lap-barang-laku": "View best selling items reports",
       "lap-transaksi-harian": "View daily transaction reports",
@@ -304,9 +331,11 @@ const Dashboard = () => {
     const titles: Record<MenuItemId, string> = {
       dashboard: "Dashboard",
       "input-barang": "Input Barang",
+      "input-supplier": "Input Supplier",
       "return-barang": "Return Barang",
       "hal-transaksi": "Halaman Transaksi",
       "transaksi-piutang": "Transaksi Piutang",
+      "stok-barang": "Stok Barang",
       "lap-barang-return": "Laporan Barang Return",
       "lap-barang-laku": "Laporan Barang Paling Laku",
       "lap-transaksi-harian": "Laporan Transaksi Harian",

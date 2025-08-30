@@ -7,9 +7,11 @@ interface FormData {
   name: string;
   itemType: "tunai" | "beli_putus" | "konsinyasi";
   quantity: number;
-  weightType: "gram" | "pieces" | "bungkus";
+  weightType: "gram" | "pieces" | "bungkus" | "mililiter";
   basePrice: number;
   expiryDate: string;
+  invoiceNumber: string;
+  purchaseType: "cash" | "hutang";
 }
 
 const InputBarang: React.FC = () => {
@@ -21,6 +23,8 @@ const InputBarang: React.FC = () => {
     weightType: "pieces",
     basePrice: 0,
     expiryDate: "",
+    invoiceNumber: "",
+    purchaseType: "cash",
   });
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
@@ -84,6 +88,8 @@ const InputBarang: React.FC = () => {
       weightType: "pieces",
       basePrice: 0,
       expiryDate: "",
+      invoiceNumber: "",
+      purchaseType: "cash",
     });
   };
 
@@ -151,6 +157,42 @@ const InputBarang: React.FC = () => {
               </select>
             </div>
 
+            {/* Invoice Pembelian dan Jenis Pembelian */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label htmlFor="invoiceNumber" className="block text-sm font-medium text-gray-700 mb-2">
+                  Nomor Invoice Pembelian *
+                </label>
+                <input
+                  type="text"
+                  id="invoiceNumber"
+                  name="invoiceNumber"
+                  value={formData.invoiceNumber}
+                  onChange={handleInputChange}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-black"
+                  placeholder="Masukkan nomor invoice"
+                  required
+                />
+              </div>
+
+              <div>
+                <label htmlFor="purchaseType" className="block text-sm font-medium text-gray-700 mb-2">
+                  Jenis Pembelian *
+                </label>
+                <select
+                  id="purchaseType"
+                  name="purchaseType"
+                  value={formData.purchaseType}
+                  onChange={handleInputChange}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-black"
+                  required
+                >
+                  <option value="cash">Cash (Tunai)</option>
+                  <option value="hutang">Hutang</option>
+                </select>
+              </div>
+            </div>
+
             {/* Jumlah dan Jenis Berat */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
@@ -186,7 +228,7 @@ const InputBarang: React.FC = () => {
                   <option value="pieces">Item</option>
                   <option value="gram">Gram</option>
                   <option value="bungkus">Bungkus</option>
-                  <option value="bungkus">Mililiter</option>
+                  <option value="mililiter">Mililiter</option>
                 </select>
               </div>
             </div>
