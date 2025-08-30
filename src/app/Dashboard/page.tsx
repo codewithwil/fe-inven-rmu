@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 // Import your components (you'll create these)
 // For now, we'll create placeholder components to avoid import errors
 
+import DashboardOverview from "../components/DashboardOverview";
 import InputBarang from "../components/InputBarang";
 import InputSupplier from "../components/InputSupplier";
 import ReturnBarang from "../components/ReturnBarang";
@@ -21,14 +22,6 @@ import LaporanJenisPembelianPage from "../components/LapJenisPembelian";
 import LaporanHutangSupplierPage from "../components/LapHutang";
 import LaporanPiutangAnggotaPage from "../components/LapPiutang";
 import LaporanBonusPointPage from "../components/LapBonusPoint";
-
-// Placeholder components
-const DashboardOverview = () => (
-  <div className="p-6">
-    <h2 className="text-2xl font-bold">Dashboard Overview</h2>
-    <p>Dashboard content will be implemented here.</p>
-  </div>
-);
 
 const Settings = () => (
   <div className="p-6">
@@ -253,11 +246,16 @@ const Dashboard = () => {
     },
   ];
 
+  // Navigation handler function that matches the expected type
+  const handleNavigate = (menuItem: string) => {
+    setActiveMenuItem(menuItem as MenuItemId);
+  };
+
   // Function to render the appropriate component based on activeMenuItem
   const renderContent = () => {
     switch (activeMenuItem) {
       case "dashboard":
-        return <DashboardOverview />;
+        return <DashboardOverview onNavigate={handleNavigate} />;
 
       // Category Barang
       case "input-barang":
@@ -300,7 +298,7 @@ const Dashboard = () => {
         return <Settings />;
 
       default:
-        return <DashboardOverview />;
+        return <DashboardOverview onNavigate={handleNavigate} />;
     }
   };
 
