@@ -65,6 +65,7 @@ type MenuItemId =
   | "lap-barang-laku"
   | "lap-transaksi-harian"
   | "lap-transaksi-bulanan"
+  | "lap-bonus-point"
   | "lap-transaksi-unique-id"
   | "lap-jenis-pembelian"
   | "lap-hutang"
@@ -418,6 +419,10 @@ const Dashboard = () => {
       "lap-hutang": "View debt reports",
       "lap-piutang": "View receivables reports",
       "lap-bonus-point": "View bonus points report per member",
+      "seluruh-user": "Manage all registered users",
+      "admin": "Manage admin accounts",
+      "petugas": "Manage staff/petugas accounts",
+      "member": "Manage member accounts",
       "history-user": "history list of all user activities",
       "history-stock": "list of all product stock history",
       settings: "Configure system settings",
@@ -444,7 +449,11 @@ const Dashboard = () => {
       "lap-hutang": "Laporan Hutang",
       "lap-piutang": "Laporan Piutang",
       "lap-bonus-point": "Laporan Bonus Point per Anggota",
-      "history_user": "Riwayat Aktivitas User",
+      "seluruh-user": "Manage all registered users",
+      "admin": "Manage admin accounts",
+      "petugas": "Manage staff/petugas accounts",
+      "member": "Manage member accounts",
+      "history-user": "Riwayat Aktivitas User",
       "history-stock": "Riwayat Aktivitas Stok Produk",
       settings: "Settings",
     };

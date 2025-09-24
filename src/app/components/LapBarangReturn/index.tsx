@@ -184,7 +184,7 @@ const loadReturnItems = async (page: number = 1) => {
 
     // 🔥 hitung summary manual
     const summaryData = mapped.reduce(
-      (acc, item) => {
+      (acc: ReportSummary, item: ReturnItem) => {
         acc.totalValue += item.totalValue;
 
         if (item.returnType === "expired") {
@@ -207,8 +207,10 @@ const loadReturnItems = async (page: number = 1) => {
         consignmentValue: 0,
         pendingCount: 0,
         processedCount: 0,
-      }
+      } as ReportSummary
     );
+
+
 
     setSummary(summaryData);
       } catch (error) {
