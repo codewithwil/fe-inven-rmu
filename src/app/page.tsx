@@ -17,14 +17,14 @@ const AdminLogin = () => {
   });
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
-
+  const API_URL = process.env.NEXT_PUBLIC_API_URL + "/login";
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
     setError("");
 
     try {
-      const { data } = await axios.post("http://localhost:8000/api/login", loginData);
+      const { data } = await axios.post(`${API_URL}`, loginData);
 
       if (data.success) {
         const user = data.data.user;
