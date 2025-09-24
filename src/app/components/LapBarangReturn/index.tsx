@@ -1,95 +1,19 @@
-/*
-API ENDPOINTS DOCUMENTATION FOR BACKEND IMPLEMENTATION:
-
-1. GET /api/return-items
-   Description: Get return items with filters
-   Headers: Authorization: Bearer {token}
-   Query Parameters:
-   - returnType: "expired" | "consignment" | "all" (optional)
-   - startDate: string (YYYY-MM-DD) (optional)
-   - endDate: string (YYYY-MM-DD) (optional)
-   - supplierId: string (optional)
-   - status: "pending" | "processed" | "cancelled" | "all" (optional)
-   - barcode: string (optional)
-   - page: number (optional, default: 1)
-   - limit: number (optional, default: 50)
-   
-   Response: {
-     data: [
-       {
-         id: string,
-         returnId: string,
-         barcode: string,
-         itemName: string,
-         quantity: number,
-         unitPrice: number,
-         totalValue: number,
-         returnType: "expired" | "consignment",
-         status: "pending" | "processed" | "cancelled",
-         reason: string,
-         supplierName: string,
-         supplierId: string,
-         expiryDate: string (for expired items),
-         consignmentEndDate: string (for consignment items),
-         returnDate: string,
-         processedDate: string | null,
-         processedBy: string | null,
-         notes: string,
-         createdAt: string,
-         updatedAt: string
-       }
-     ],
-     pagination: {
-       currentPage: number,
-       totalPages: number,
-       totalItems: number,
-       itemsPerPage: number
-     },
-     summary: {
-       totalValue: number,
-       expiredValue: number,
-       consignmentValue: number,
-       pendingCount: number,
-       processedCount: number
-     }
-   }
-
-2. GET /api/suppliers
-   Description: Get list of suppliers for filter dropdown
-   Headers: Authorization: Bearer {token}
-   Response: {
-     data: [
-       {
-         id: string,
-         name: string,
-         code: string
-       }
-     ]
-   }
-
-3. POST /api/return-items/export
-   Description: Export return items to CSV
-   Headers: Authorization: Bearer {token}, Content-Type: application/json
-   Body: {
-     returnType: string,
-     startDate: string,
-     endDate: string,
-     supplierId: string,
-     status: string,
-     barcode: string
-   }
-   Response: CSV file download
-
-ERROR RESPONSES:
-- 400: Invalid filter parameters
-- 401: Unauthorized (invalid token)
-- 500: Server error
-*/
-
 "use client";
 
+import axios from "axios";
 import React, { useState, useEffect } from "react";
-import { Calendar, Download, Filter, Search, RefreshCw, FileText, Package, AlertTriangle } from "lucide-react";
+import Pagination from "../Pagination/Pagination";
+import { useDebounce } from "../../hooks/useDebounce";
+import {
+  Calendar,
+  Download,
+  Filter,
+  Search,
+  RefreshCw,
+  FileText,
+  Package,
+  AlertTriangle,
+} from "lucide-react";
 
 interface ReturnItem {
   id: string;
@@ -128,12 +52,6 @@ interface ReportSummary {
   processedCount: number;
 }
 
-interface Pagination {
-  currentPage: number;
-  totalPages: number;
-  totalItems: number;
-  itemsPerPage: number;
-}
 
 interface Filters {
   returnType: "expired" | "consignment" | "all";
@@ -154,12 +72,8 @@ const LaporanBarangReturnPage: React.FC = () => {
     pendingCount: 0,
     processedCount: 0,
   });
-  const [pagination, setPagination] = useState<Pagination>({
-    currentPage: 1,
-    totalPages: 1,
-    totalItems: 0,
-    itemsPerPage: 50,
-  });
+  const [page, setPage] = useState(1);
+  const [pagination, setPagination] = useState<any>(null);
   const [filters, setFilters] = useState<Filters>({
     returnType: "all",
     startDate: "",
@@ -171,7 +85,10 @@ const LaporanBarangReturnPage: React.FC = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
   const [showFilters, setShowFilters] = useState(false);
-
+  const [searchTerm, setSearchTerm] = useState<string>("");
+  const debouncedSearch = useDebounce(searchTerm, 500);
+  const API_URL = process.env.NEXT_PUBLIC_API_URL + "/transactions/returnProduct/invoice";
+  const token = localStorage.getItem("admin_token");
   useEffect(() => {
     loadSuppliers();
     loadReturnItems();
@@ -179,7 +96,7 @@ const LaporanBarangReturnPage: React.FC = () => {
 
   const loadSuppliers = async () => {
     try {
-      const response = await fetch("/api/suppliers", {
+      const response = await fetch("http://localhost:8000/api/resources/supplier", {
         headers: {
           Authorization: `Bearer ${localStorage.getItem("admin_token")}`,
         },
@@ -194,52 +111,121 @@ const LaporanBarangReturnPage: React.FC = () => {
     }
   };
 
-  const loadReturnItems = async (page: number = 1) => {
-    setIsLoading(true);
+  // mapping API → ReturnItem
+  const mapApiToReturnItem = (apiData: any): ReturnItem => {
+    return {
+      id: String(apiData.returnId),
+      returnId: apiData.returnCode,
+      barcode: apiData.product?.barcode || "-",
+      itemName: apiData.product?.name || "-",
+      quantity: parseFloat(apiData.qty),
+      unitPrice: parseFloat(apiData.priceReturn),
+      totalValue: parseFloat(apiData.payments?.[0]?.amount || "0"),
+      returnType: apiData.typeReturn === 1 ? "consignment" : "expired",
+      status:
+        apiData.statusReturn === 1
+          ? "pending"
+          : apiData.statusReturn === 3
+          ? "processed"
+          : "cancelled",
+      reason: apiData.notes || "",
+      supplierName: apiData.product?.supplier?.name || "-",
+      supplierId: String(apiData.product?.supplier?.supplierId || ""),
+      expiryDate: apiData.product?.expireDate || undefined,
+      consignmentEndDate: apiData.product?.consignmentEndDate || undefined,
+      returnDate: apiData.returnDate,
+      processedDate: apiData.processedDate || undefined,
+      processedBy: apiData.processedBy || undefined,
+      notes: apiData.notes || "",
+      createdAt: apiData.created_at,
+      updatedAt: apiData.updated_at,
+    };
+  };
 
-    try {
-      const queryParams = new URLSearchParams({
-        page: page.toString(),
-        limit: pagination.itemsPerPage.toString(),
-      });
+const loadReturnItems = async (page: number = 1) => {
+  setIsLoading(true);
+  const limit = pagination?.itemsPerPage || 10; 
+  try {
+    const queryParams = new URLSearchParams({
+      page: page.toString(),
+      limit: limit.toString(),
+      search: debouncedSearch,
+    });
 
-      // Add filters to query params
-      if (filters.returnType !== "all") queryParams.append("returnType", filters.returnType);
-      if (filters.startDate) queryParams.append("startDate", filters.startDate);
-      if (filters.endDate) queryParams.append("endDate", filters.endDate);
-      if (filters.supplierId) queryParams.append("supplierId", filters.supplierId);
-      if (filters.status !== "all") queryParams.append("status", filters.status);
-      if (filters.barcode) queryParams.append("barcode", filters.barcode);
+    if (filters.returnType !== "all")
+      queryParams.append("returnType", filters.returnType);
+    if (filters.startDate) queryParams.append("startDate", filters.startDate);
+    if (filters.endDate) queryParams.append("endDate", filters.endDate);
+    if (filters.supplierId) queryParams.append("supplierId", filters.supplierId);
+    if (filters.status !== "all") queryParams.append("status", filters.status);
+    if (filters.barcode) queryParams.append("barcode", filters.barcode);
 
-      const response = await fetch(`/api/return-items?${queryParams.toString()}`, {
+    const response = await axios.get(
+      `${API_URL}?${queryParams.toString()}`,
+      {
         headers: {
           Authorization: `Bearer ${localStorage.getItem("admin_token")}`,
         },
-      });
-
-      if (response.ok) {
-        const result = await response.json();
-        setReturnItems(result.data || []);
-        setPagination(result.pagination || pagination);
-        setSummary(result.summary || summary);
-      } else {
-        const error = await response.json();
-        alert(`Error: ${error.message || "Gagal memuat data"}`);
       }
-    } catch (error) {
-      console.error("Error loading return items:", error);
-      alert("Terjadi kesalahan saat memuat data");
-    } finally {
-      setIsLoading(false);
-    }
-  };
+    );
+
+    const result = response.data;
+
+    // 🔑 sesuaikan dengan struktur JSON
+    const apiData = result.data?.returns?.original?.data;
+    const apiItems = apiData?.data || [];
+    const mapped = apiItems.map(mapApiToReturnItem);
+
+    setReturnItems(mapped);
+    setPagination(response.data.data.return);
+
+    setReturnItems(mapped);
+    setPagination(result.data?.returns?.original); // perbaiki sesuai struktur API
+
+    // 🔥 hitung summary manual
+    const summaryData = mapped.reduce(
+      (acc, item) => {
+        acc.totalValue += item.totalValue;
+
+        if (item.returnType === "expired") {
+          acc.expiredValue += item.totalValue;
+        } else if (item.returnType === "consignment") {
+          acc.consignmentValue += item.totalValue;
+        }
+
+        if (item.status === "pending") {
+          acc.pendingCount += 1;
+        } else if (item.status === "processed") {
+          acc.processedCount += 1;
+        }
+
+        return acc;
+      },
+      {
+        totalValue: 0,
+        expiredValue: 0,
+        consignmentValue: 0,
+        pendingCount: 0,
+        processedCount: 0,
+      }
+    );
+
+    setSummary(summaryData);
+      } catch (error) {
+        console.error("Error loading return items:", error);
+        alert("Terjadi kesalahan saat memuat data");
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
 
   const handleFilterChange = (key: keyof Filters, value: string) => {
     setFilters((prev) => ({ ...prev, [key]: value }));
   };
 
   const applyFilters = () => {
-    setPagination((prev) => ({ ...prev, currentPage: 1 }));
+    setPagination(null);
     loadReturnItems(1);
   };
 
@@ -252,13 +238,10 @@ const LaporanBarangReturnPage: React.FC = () => {
       status: "all",
       barcode: "",
     });
-    setPagination((prev) => ({ ...prev, currentPage: 1 }));
+   setPagination(null);
     loadReturnItems(1);
   };
 
-  const handlePageChange = (page: number) => {
-    loadReturnItems(page);
-  };
 
   const exportToCSV = async () => {
     setIsExporting(true);
@@ -271,40 +254,45 @@ const LaporanBarangReturnPage: React.FC = () => {
         supplierId: filters.supplierId,
         status: filters.status,
         barcode: filters.barcode,
+        search: debouncedSearch,
       };
 
-      const response = await fetch("/api/return-items/export", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${localStorage.getItem("admin_token")}`,
-        },
-        body: JSON.stringify(exportData),
-      });
+      const res = await axios.post(
+        `${API_URL}/export`,
+        exportData,
+        {
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+          responseType: "blob", 
+        }
+      );
 
-      if (response.ok) {
-        const blob = await response.blob();
-        const url = window.URL.createObjectURL(blob);
-        const a = document.createElement("a");
-        a.style.display = "none";
-        a.href = url;
-        a.download = `laporan-barang-return-${new Date().getTime()}.csv`;
-        document.body.appendChild(a);
-        a.click();
-        window.URL.revokeObjectURL(url);
-        document.body.removeChild(a);
-        alert("File CSV berhasil didownload!");
-      } else {
-        const error = await response.json();
-        alert(`Error: ${error.message || "Gagal mengekspor data"}`);
-      }
-    } catch (error) {
+      const blob = new Blob([res.data], { type: "text/csv" });
+      const url = window.URL.createObjectURL(blob);
+
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `laporan-barang-return-${new Date().getTime()}.csv`;
+      document.body.appendChild(a);
+      a.click();
+
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+      alert("File CSV berhasil didownload!");
+    } catch (error: any) {
       console.error("Error exporting data:", error);
-      alert("Terjadi kesalahan saat mengekspor data");
+      alert(
+        `Terjadi kesalahan saat mengekspor data: ${
+          error.response?.data?.message || error.message
+        }`
+      );
     } finally {
       setIsExporting(false);
     }
   };
+
 
   const getStatusBadge = (status: string) => {
     const statusStyles = {
@@ -319,7 +307,15 @@ const LaporanBarangReturnPage: React.FC = () => {
       cancelled: "Dibatalkan",
     };
 
-    return <span className={`px-2 py-1 text-xs font-medium rounded-full border ${statusStyles[status as keyof typeof statusStyles]}`}>{statusLabels[status as keyof typeof statusLabels]}</span>;
+    return (
+      <span
+        className={`px-2 py-1 text-xs font-medium rounded-full border ${
+          statusStyles[status as keyof typeof statusStyles]
+        }`}
+      >
+        {statusLabels[status as keyof typeof statusLabels]}
+      </span>
+    );
   };
 
   const getReturnTypeBadge = (type: string) => {
@@ -333,7 +329,15 @@ const LaporanBarangReturnPage: React.FC = () => {
       consignment: "Konsinyasi",
     };
 
-    return <span className={`px-2 py-1 text-xs font-medium rounded-full border ${typeStyles[type as keyof typeof typeStyles]}`}>{typeLabels[type as keyof typeof typeLabels]}</span>;
+    return (
+      <span
+        className={`px-2 py-1 text-xs font-medium rounded-full border ${
+          typeStyles[type as keyof typeof typeStyles]
+        }`}
+      >
+        {typeLabels[type as keyof typeof typeLabels]}
+      </span>
+    );
   };
 
   return (
@@ -587,46 +591,13 @@ const LaporanBarangReturnPage: React.FC = () => {
           </div>
 
           {/* Pagination */}
-          {pagination.totalPages > 1 && (
-            <div className="px-6 py-4 border-t border-gray-200">
-              <div className="flex items-center justify-between">
-                <div className="text-sm text-gray-600">
-                  Menampilkan {(pagination.currentPage - 1) * pagination.itemsPerPage + 1} - {Math.min(pagination.currentPage * pagination.itemsPerPage, pagination.totalItems)} dari {pagination.totalItems} data
-                </div>
-                <div className="flex gap-2">
-                  <button
-                    onClick={() => handlePageChange(pagination.currentPage - 1)}
-                    disabled={pagination.currentPage <= 1}
-                    className="px-3 py-2 text-sm text-gray-700 border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    Previous
-                  </button>
-
-                  {Array.from({ length: Math.min(5, pagination.totalPages) }, (_, i) => {
-                    const page = pagination.currentPage - 2 + i;
-                    if (page < 1 || page > pagination.totalPages) return null;
-                    return (
-                      <button
-                        key={page}
-                        onClick={() => handlePageChange(page)}
-                        className={`px-3 py-2 text-sm border rounded-md ${page === pagination.currentPage ? "bg-blue-500 text-white border-blue-500" : "text-gray-700 border-gray-300 hover:bg-gray-50"}`}
-                      >
-                        {page}
-                      </button>
-                    );
-                  })}
-
-                  <button
-                    onClick={() => handlePageChange(pagination.currentPage + 1)}
-                    disabled={pagination.currentPage >= pagination.totalPages}
-                    className="px-3 py-2 text-sm text-gray-700 border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    Next
-                  </button>
-                </div>
-              </div>
-            </div>
-          )}
+          {pagination && (
+              <Pagination
+                currentPage={pagination.current_page}
+                lastPage={pagination.last_page}
+                onPageChange={(pageNumber) => setPage(pageNumber)}
+              />
+            )}
         </div>
       </div>
     </div>

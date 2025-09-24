@@ -2,16 +2,17 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import axios from "axios";
 
 interface LoginData {
-  username: string;
+  email: string;
   password: string;
 }
 
 const AdminLogin = () => {
   const router = useRouter();
   const [loginData, setLoginData] = useState<LoginData>({
-    username: "",
+    email: "",
     password: "",
   });
   const [isLoading, setIsLoading] = useState(false);
@@ -23,26 +24,22 @@ const AdminLogin = () => {
     setError("");
 
     try {
-      // Simulate API call
-      await new Promise((resolve) => setTimeout(resolve, 1000));
+      const { data } = await axios.post("http://localhost:8000/api/login", loginData);
 
-      if (loginData.username === "admin" && loginData.password === "password") {
-        const user = {
-          id: 1,
-          username: "admin",
-          email: "admin@rmu.org",
-          role: "admin",
-        };
+      if (data.success) {
+        const user = data.data.user;
+        const token = data.data.token;
 
         localStorage.setItem("admin_user", JSON.stringify(user));
-        localStorage.setItem("admin_token", "demo_token_123");
+        localStorage.setItem("admin_token", token);
 
         router.push("/Dashboard");
       } else {
-        setError("Username atau password salah!");
+        setError(data.message || "Email atau password salah!");
       }
-    } catch (err) {
-      setError("Terjadi kesalahan. Silakan coba lagi.");
+    } catch (err: any) {
+      console.error(err);
+      setError(err.response?.data?.message || "Terjadi kesalahan. Silakan coba lagi.");
     } finally {
       setIsLoading(false);
     }
@@ -51,9 +48,7 @@ const AdminLogin = () => {
   return (
     <div className="min-h-screen bg-gradient-to-br from-white via-blue-50 to-orange-50 flex items-center justify-center p-6">
       <div className="w-full max-w-sm">
-        {/* Login Card */}
         <div className="bg-white rounded-2xl shadow-lg overflow-hidden border border-blue-100">
-          {/* Header */}
           <div className="bg-gradient-to-r from-blue-100 to-orange-100 p-6 text-center">
             <div className="w-12 h-12 bg-white/80 rounded-full flex items-center justify-center mx-auto mb-3 shadow-md">
               <svg className="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -64,7 +59,6 @@ const AdminLogin = () => {
             <p className="text-sm text-gray-600">Management System</p>
           </div>
 
-          {/* Login Form */}
           <div className="p-6">
             {error && (
               <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg">
@@ -79,13 +73,13 @@ const AdminLogin = () => {
 
             <form onSubmit={handleLogin} className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Username</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
                 <input
-                  type="text"
-                  value={loginData.username}
-                  onChange={(e) => setLoginData({ ...loginData, username: e.target.value })}
+                  type="email"
+                  value={loginData.email}
+                  onChange={(e) => setLoginData({ ...loginData, email: e.target.value })}
                   className="w-full px-3 py-2.5 border border-blue-200 rounded-lg focus:ring-2 focus:ring-blue-300 focus:border-blue-400 transition-colors bg-white text-black placeholder-gray-400"
-                  placeholder="Enter username"
+                  placeholder="Enter email"
                   required
                 />
               </div>
@@ -117,13 +111,6 @@ const AdminLogin = () => {
                 )}
               </button>
             </form>
-
-            {/* Demo Credentials */}
-            <div className="mt-4 p-3 bg-orange-50 border border-orange-200 rounded-lg">
-              <p className="text-xs text-orange-800 font-medium mb-1">Demo Access:</p>
-              <p className="text-xs text-orange-700">Username: admin</p>
-              <p className="text-xs text-orange-700">Password: password</p>
-            </div>
           </div>
         </div>
       </div>

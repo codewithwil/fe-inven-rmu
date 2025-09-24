@@ -22,6 +22,13 @@ import LaporanJenisPembelianPage from "../components/LapJenisPembelian";
 import LaporanHutangSupplierPage from "../components/LapHutang";
 import LaporanPiutangAnggotaPage from "../components/LapPiutang";
 import LaporanBonusPointPage from "../components/LapBonusPoint";
+import InputKategori from "../components/InputKategori";
+import AllUser from "../components/People/AllUser";
+import AllMember from "../components/People/Member";
+import InputAdmin from "../components/People/Admin";
+import InputPetugas from "../components/People/Employee";
+import AllHistoryStock from "../components/History/Stock";
+import AllHistoryUser from "../components/History/User";
 
 const Settings = () => (
   <div className="p-6">
@@ -31,13 +38,23 @@ const Settings = () => (
 );
 
 // Define types for better TypeScript support
-interface User {
-  username: string;
-  email: string;
+interface Admin {
+  adminId: number;
+  name: string;
+  phone: number;
 }
+
+interface User {
+  id: number;
+  email: string;
+  role: string;
+  admin: Admin;
+}
+
 
 type MenuItemId =
   | "dashboard"
+  | "input-kategori"
   | "input-barang"
   | "input-supplier"
   | "return-barang"
@@ -52,7 +69,12 @@ type MenuItemId =
   | "lap-jenis-pembelian"
   | "lap-hutang"
   | "lap-piutang"
-  | "lap-bonus-point"
+  | "seluruh-user"
+  | "admin"
+  | "petugas"
+  | "member"
+  | "history-user"
+  | "history-stock"
   | "settings";
 
 type CategoryId = "barang" | "transaksi" | "laporan";
@@ -114,6 +136,11 @@ const Dashboard = () => {
       label: "Category Barang",
       icon: <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10" />,
       items: [
+        {
+          id: "input-kategori" as MenuItemId,
+          label: "Input Kategori Barang",
+          icon: <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />,
+        },
         {
           id: "input-barang" as MenuItemId,
           label: "Input Barang",
@@ -244,6 +271,64 @@ const Dashboard = () => {
         },
       ],
     },
+    {
+      id: "user" as CategoryId,
+      label: "Manajemen User",
+      icon: <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 7h6l1 9H8l1-9zM8 7V5a2 2 0 012-2h4a2 2 0 012 2v2M5 7h14" />,
+      items: [
+        {
+          id: "seluruh-user" as MenuItemId,
+          label: "Seluruh User",
+          icon: <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />,
+        },
+        {
+          id: "admin" as MenuItemId,
+          label: "Admin",
+          icon: <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z" />,
+        },
+        {
+          id: "petugas" as MenuItemId,
+          label: "Petugas",
+          icon: (
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M7 4V2a1 1 0 011-1h8a1 1 0 011 1v2m0 0V1a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 01-1 1h-2a1 1 0 01-1-1V4m-9 0H4a1 1 0 00-1 1v10a1 1 0 001 1h2m9-12v8a2 2 0 01-2 2H9a2 2 0 01-2-2V4m8 0H8m0 0v8a1 1 0 001 1h6a1 1 0 001-1V4"
+            />
+          ),
+        },
+         {
+          id: "member" as MenuItemId,
+          label: "Member",
+          icon: (
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M7 4V2a1 1 0 011-1h8a1 1 0 011 1v2m0 0V1a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 01-1 1h-2a1 1 0 01-1-1V4m-9 0H4a1 1 0 00-1 1v10a1 1 0 001 1h2m9-12v8a2 2 0 01-2 2H9a2 2 0 01-2-2V4m8 0H8m0 0v8a1 1 0 001 1h6a1 1 0 001-1V4"
+            />
+          ),
+        },
+      ],
+    },
+     {
+      id: "history" as CategoryId,
+      label: "Riwayat",
+      icon: <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 7h6l1 9H8l1-9zM8 7V5a2 2 0 012-2h4a2 2 0 012 2v2M5 7h14" />,
+      items: [
+        {
+          id: "history-user" as MenuItemId,
+          label: "Riwayat aktivitas user",
+          icon: <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />,
+        },
+        {
+          id: "history-stock" as MenuItemId,
+          label: "Riwayat Stock",
+          icon: <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z" />,
+        },
+      ],
+    },
   ];
 
   // Navigation handler function that matches the expected type
@@ -251,13 +336,14 @@ const Dashboard = () => {
     setActiveMenuItem(menuItem as MenuItemId);
   };
 
-  // Function to render the appropriate component based on activeMenuItem
   const renderContent = () => {
     switch (activeMenuItem) {
       case "dashboard":
         return <DashboardOverview onNavigate={handleNavigate} />;
 
       // Category Barang
+      case "input-kategori":
+        return <InputKategori />;
       case "input-barang":
         return <InputBarang />;
       case "input-supplier":
@@ -292,7 +378,18 @@ const Dashboard = () => {
         return <LapBarangReturn />;
       case "lap-barang-laku":
         return <LapBarangLaku />;
-
+      case "seluruh-user":
+        return <AllUser />;
+      case "admin":
+        return <InputAdmin />;
+      case "petugas":
+        return <InputPetugas />;
+      case "member":
+        return <AllMember />;
+      case "history-user":
+        return <AllHistoryUser />;
+      case "history-stock":
+        return <AllHistoryStock />;
       // Settings
       case "settings":
         return <Settings />;
@@ -305,6 +402,7 @@ const Dashboard = () => {
   const getPageDescription = (): string => {
     const descriptions: Record<MenuItemId, string> = {
       dashboard: "Overview of your business performance",
+      "input-kategori": "Add new items to inventory",
       "input-barang": "Add new items to inventory",
       "input-supplier": "Manage supplier information and data",
       "return-barang": "Process returned items",
@@ -320,6 +418,8 @@ const Dashboard = () => {
       "lap-hutang": "View debt reports",
       "lap-piutang": "View receivables reports",
       "lap-bonus-point": "View bonus points report per member",
+      "history-user": "history list of all user activities",
+      "history-stock": "list of all product stock history",
       settings: "Configure system settings",
     };
     return descriptions[activeMenuItem] || "Overview of your business performance";
@@ -328,6 +428,7 @@ const Dashboard = () => {
   const getPageTitle = (): string => {
     const titles: Record<MenuItemId, string> = {
       dashboard: "Dashboard",
+      "input-kategori": "Input Kategori",
       "input-barang": "Input Barang",
       "input-supplier": "Input Supplier",
       "return-barang": "Return Barang",
@@ -343,6 +444,8 @@ const Dashboard = () => {
       "lap-hutang": "Laporan Hutang",
       "lap-piutang": "Laporan Piutang",
       "lap-bonus-point": "Laporan Bonus Point per Anggota",
+      "history_user": "Riwayat Aktivitas User",
+      "history-stock": "Riwayat Aktivitas Stok Produk",
       settings: "Settings",
     };
     return titles[activeMenuItem] || "Dashboard";
@@ -485,11 +588,14 @@ const Dashboard = () => {
               <div className="relative">
                 <button onClick={() => setIsProfileDropdownOpen(!isProfileDropdownOpen)} className="flex items-center space-x-3 p-2 rounded-lg hover:bg-gray-100 transition-colors">
                   <div className="w-8 h-8 bg-gradient-to-r from-blue-500 to-orange-400 rounded-full flex items-center justify-center">
-                    <span className="text-white font-medium text-sm">{user.username.charAt(0).toUpperCase()}</span>
+                    <span className="text-white font-medium text-sm">
+                      {user?.admin?.name?.charAt(0).toUpperCase() || "A"}
+                    </span>
+
                   </div>
                   <div className="hidden md:block text-left">
-                    <p className="text-sm font-medium text-gray-900">{user.username}</p>
-                    <p className="text-xs text-gray-600">{user.email}</p>
+                    <p className="text-sm font-medium text-gray-900">{user?.admin?.name || "Name not set"}</p>
+                    <p className="text-xs text-gray-600">{user?.email}</p>
                   </div>
                   <svg className="w-4 h-4 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
@@ -500,8 +606,8 @@ const Dashboard = () => {
                 {isProfileDropdownOpen && (
                   <div className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg border border-gray-200 py-2 z-50">
                     <div className="px-4 py-2 border-b border-gray-200">
-                      <p className="text-sm font-medium text-gray-900">{user.username}</p>
-                      <p className="text-xs text-gray-600">{user.email}</p>
+                      <p className="text-sm font-medium text-gray-900">{user?.admin?.name || "Name not set"}</p>
+                      <p className="text-xs text-gray-600">{user?.email}</p>
                     </div>
 
                     <button onClick={() => setActiveMenuItem("settings")} className="w-full flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors">
@@ -538,15 +644,15 @@ const Dashboard = () => {
         </main>
 
         {/* Footer */}
-        <footer className="bg-white border-t border-gray-200 px-6 py-4">
-          <div className="max-w-7xl mx-auto">
+        <footer className="fixed bottom-0 left-0 w-full bg-white border-t border-gray-200 px-6 py-4">
+          <div className="max-w-6xl mx-auto">
             <div className="flex flex-col md:flex-row justify-between items-center text-sm text-gray-600">
               <div className="flex items-center space-x-4 mb-2 md:mb-0">
                 <p>&copy; 2024 POS System. All rights reserved.</p>
                 <span className="hidden md:inline">•</span>
                 <p className="hidden md:inline">Version 1.0.0</p>
               </div>
-              <div className="flex items-center space-x-6">
+              <div className="flex items-center space-x-6 ml-auto">
                 <button className="hover:text-gray-900 transition-colors">Help</button>
                 <button className="hover:text-gray-900 transition-colors">Support</button>
                 <button className="hover:text-gray-900 transition-colors">Privacy</button>

@@ -1,9 +1,10 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Search, RotateCcw, AlertCircle, CheckCircle, Package, Calendar } from "lucide-react";
 
 interface FormData {
+  productId?: number;
   barcode: string;
   name: string;
   returnType: "konsinyasi" | "kadaluarsa";
@@ -12,6 +13,7 @@ interface FormData {
   returnPrice: number;
   returnReason: string;
   returnDate: string;
+  statusReturn?: 0 | 1 | 2 | 3;
 }
 
 interface ApiError {
@@ -29,9 +31,13 @@ const ReturnBarang: React.FC = () => {
     weightType: "pieces",
     returnPrice: 0,
     returnReason: "",
-    returnDate: new Date().toISOString().split("T")[0], // Default to today
+    returnDate: new Date().toISOString().split("T")[0], 
   });
 
+  const [returnData, setReturnData] = useState<any[]>([]);
+  const [editReturnId, setEditReturnId] = useState<number | null>(null);
+  const [isLoadingReturn, setIsLoadingReturn] = useState(false);
+  const [returnError, setReturnError] = useState("");
   const [isSearching, setIsSearching] = useState(false);
   const [itemFound, setItemFound] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -40,6 +46,41 @@ const ReturnBarang: React.FC = () => {
   const [submitError, setSubmitError] = useState<string>("");
   const [submitSuccess, setSubmitSuccess] = useState<string>("");
 
+  const fetchReturnData = async () => {
+    setIsLoadingReturn(true);
+    setReturnError("");
+    try {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/transactions/returnProduct`, {
+        headers: {
+          Authorization: `Bearer ${localStorage.getItem("admin_token")}`,
+        },
+      });
+      if (response.ok) {
+        const result = await safeJsonParse(response);
+        if (result && result.data && result.data.returns && Array.isArray(result.data.returns.data)) {
+          setReturnData(result.data.returns.data);
+        } else {
+          setReturnError("Data return tidak sesuai format");
+        }
+      } else {
+        setReturnError(`Error ${response.status}: Gagal mengambil data return`);
+      }
+    } catch (error) {
+      console.error(error);
+      setReturnError("Gagal menghubungi API return");
+    } finally {
+      setIsLoadingReturn(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchReturnData();
+  }, []);
+
+  useEffect(() => {
+    if (submitSuccess) fetchReturnData();
+  }, [submitSuccess]);
+
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
     setFormData((prev) => ({
@@ -47,7 +88,6 @@ const ReturnBarang: React.FC = () => {
       [name]: value,
     }));
 
-    // Clear errors when user starts typing
     if (submitError) setSubmitError("");
     if (submitSuccess) setSubmitSuccess("");
   };
@@ -102,40 +142,45 @@ const ReturnBarang: React.FC = () => {
     setSubmitSuccess("");
 
     try {
-      const response = await fetch(`/api/barang/${formData.barcode}`, {
-        headers: {
-          Authorization: `Bearer ${localStorage.getItem("admin_token")}`,
-        },
-      });
+      const response = await fetch(
+        `${process.env.NEXT_PUBLIC_API_URL}/resources/product/return?search=${formData.barcode}`, 
+        {
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem("admin_token")}`,
+          },
+        }
+      );
 
       if (response.ok) {
-        const barang = await safeJsonParse(response);
+        const result = await safeJsonParse(response);
 
-        if (barang) {
-          // Check if item is eligible for return (konsinyasi or expired)
-          const today = new Date();
-          const expiryDate = barang.expiryDate ? new Date(barang.expiryDate) : null;
-          const isExpired = expiryDate && expiryDate < today;
+        if (result && result.data && Array.isArray(result.data.product)) {
+          const product = result.data.product[0]; // ambil produk pertama
 
-          if (barang.itemType === "konsinyasi" || isExpired) {
+         if (product) {
+            const today = new Date();
+            const expiryDate = product.expireDate ? new Date(product.expireDate) : null;
+            const isExpired = expiryDate && expiryDate < today;
+
             setFormData((prev) => ({
               ...prev,
-              name: barang.name,
-              weightType: barang.weightType || "pieces",
-              returnPrice: barang.basePrice || 0,
+              productId: product.productId, // simpan ID produk
+              name: product.name,
+              weightType: product.unit || "pieces",
+              returnPrice: parseFloat(product.purchase_price) || 0,
               returnType: isExpired ? "kadaluarsa" : "konsinyasi",
             }));
+
             setItemFound(true);
             setApiStatus("API Connected");
             setSearchError("");
           } else {
-            setSearchError("Barang ini tidak dapat di-return. Hanya barang konsinyasi atau barang kadaluarsa yang dapat di-return.");
+            setSearchError("Barang tidak ditemukan");
             setItemFound(false);
           }
         } else {
-          // Non-JSON response, fallback to mock
-          console.log("Search API returned non-JSON response, using mock data");
-          handleMockSearch();
+          setSearchError("Response API tidak sesuai format");
+          setItemFound(false);
         }
       } else if (response.status === 404) {
         setSearchError("Barang tidak ditemukan");
@@ -146,25 +191,18 @@ const ReturnBarang: React.FC = () => {
         setItemFound(false);
       } else {
         const errorData = await safeJsonParse(response);
-        if (errorData) {
-          setSearchError(errorData.message || `Error ${response.status}: Gagal mencari barang`);
-        } else {
-          // Non-JSON error response, switch to demo mode
-          setSearchError(`API endpoint tidak tersedia (${response.status})`);
-          setApiStatus("API Not Available - Demo Mode");
-          handleMockSearch();
-          return;
-        }
+        setSearchError(errorData?.message || `Error ${response.status}: Gagal mencari barang`);
         setItemFound(false);
       }
     } catch (error) {
       console.error("Error searching item:", error);
-      console.log("API not available, using mock data");
-      handleMockSearch();
+      setSearchError("Gagal menghubungi API");
+      setItemFound(false);
     } finally {
       setIsSearching(false);
     }
   };
+
 
   const handleMockSearch = () => {
     setApiStatus("API Not Available - Demo Mode");
@@ -205,89 +243,65 @@ const ReturnBarang: React.FC = () => {
     }
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+const handleSubmit = async (e: React.FormEvent) => {
+  e.preventDefault();
 
-    if (!itemFound) {
-      setSubmitError("Silakan cari barang terlebih dahulu");
-      return;
-    }
+  if (!itemFound || !formData.productId) {
+    setSubmitError("Silakan cari barang terlebih dahulu");
+    return;
+  }
 
-    // Validation
-    if (formData.quantity <= 0) {
-      setSubmitError("Jumlah return harus lebih dari 0");
-      return;
-    }
+  const typeReturn = formData.returnType === "konsinyasi" ? 1 : 2;
 
-    if (formData.returnPrice < 0) {
-      setSubmitError("Harga return tidak boleh negatif");
-      return;
-    }
 
-    if (!formData.returnReason.trim()) {
-      setSubmitError("Alasan return harus diisi");
-      return;
-    }
-
-    setIsSubmitting(true);
-    setSubmitError("");
-    setSubmitSuccess("");
-
-    try {
-      const response = await fetch("/api/barang/return", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${localStorage.getItem("admin_token")}`,
-        },
-        body: JSON.stringify(formData),
-      });
-
-      if (response.ok) {
-        const result = await safeJsonParse(response);
-        if (result) {
-          setSubmitSuccess("Barang berhasil di-return!");
-
-          // Reset form after successful submission
-          setTimeout(() => {
-            resetForm();
-          }, 2000);
-        } else {
-          console.log("Submit API returned non-JSON response, showing mock success");
-          setApiStatus("API Not Available - Demo Mode");
-          setSubmitSuccess("Data return telah disiapkan (Demo Mode). Implementasikan API endpoint /api/barang/return untuk fungsionalitas lengkap.");
-        }
-      } else if (response.status === 400) {
-        const errorData = await safeJsonParse(response);
-        setSubmitError(errorData?.message || "Data yang dikirim tidak valid");
-      } else if (response.status === 401) {
-        setSubmitError("Sesi login telah berakhir. Silakan login ulang.");
-      } else if (response.status === 409) {
-        const errorData = await safeJsonParse(response);
-        setSubmitError(errorData?.message || "Konflik data. Barang mungkin sudah di-return.");
-      } else if (response.status === 422) {
-        const errorData = await safeJsonParse(response);
-        setSubmitError(errorData?.message || "Data tidak memenuhi kriteria return");
-      } else {
-        const errorData = await safeJsonParse(response);
-        if (errorData) {
-          setSubmitError(errorData.message || `Error ${response.status}: Gagal memproses return`);
-        } else {
-          // Non-JSON error response, switch to demo mode
-          setSubmitError(`API endpoint tidak tersedia (${response.status})`);
-          setApiStatus("API Not Available - Demo Mode");
-          setSubmitSuccess("Data return telah disiapkan (Demo Mode). Implementasikan API endpoint /api/barang/return untuk fungsionalitas lengkap.");
-        }
-      }
-    } catch (error) {
-      console.error("Error submitting return:", error);
-      console.log("API not available, showing mock success");
-      setApiStatus("API Not Available - Demo Mode");
-      setSubmitSuccess("Data return telah disiapkan (Demo Mode). Implementasikan API endpoint /api/barang/return untuk fungsionalitas lengkap.");
-    } finally {
-      setIsSubmitting(false);
-    }
+  const payload = {
+    product_id: formData.productId,
+    typeReturn,
+    qty: formData.quantity,
+    priceReturn: formData.returnPrice,
+    notes: formData.returnReason,
+    returnDate: formData.returnDate,
+    statusReturn: formData.statusReturn, 
   };
+
+  const endpoint = editReturnId
+    ? `${process.env.NEXT_PUBLIC_API_URL}/transactions/returnProduct/update/${editReturnId}`
+    : `${process.env.NEXT_PUBLIC_API_URL}/transactions/returnProduct/store`;
+
+
+  console.log("Submitting return:", { editReturnId, payload }); // debug
+
+  setIsSubmitting(true);
+  setSubmitError("");
+  setSubmitSuccess("");
+
+  try {
+    const response = await fetch(endpoint, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${localStorage.getItem("admin_token")}`,
+      },
+      body: JSON.stringify(payload),
+    });
+
+    if (response.ok) {
+      const result = await safeJsonParse(response);
+      setSubmitSuccess(editReturnId ? "Data return berhasil diupdate!" : "Barang berhasil di-return!");
+      setTimeout(() => resetForm(), 2000);
+      setEditReturnId(null);
+    } else {
+      const errorData = await safeJsonParse(response);
+      setSubmitError(errorData?.message || `Error ${response.status}`);
+    }
+  } catch (error) {
+    console.error("Error submitting return:", error);
+    setSubmitError("Gagal menghubungi API return");
+  } finally {
+    setIsSubmitting(false);
+  }
+};
+
 
   const resetForm = () => {
     setFormData({
@@ -299,8 +313,10 @@ const ReturnBarang: React.FC = () => {
       returnPrice: 0,
       returnReason: "",
       returnDate: new Date().toISOString().split("T")[0],
+      statusReturn: 1,
     });
     setItemFound(false);
+    setEditReturnId(null);
     setSearchError("");
     setSubmitError("");
     setSubmitSuccess("");
@@ -311,6 +327,49 @@ const ReturnBarang: React.FC = () => {
     setSubmitError("");
     setSubmitSuccess("");
   };
+
+  const handleEdit = (item: any) => {
+    setFormData({
+      productId: item.product_id,
+      barcode: item.product?.barcode || "",
+      name: item.product?.name || "",
+      returnType: item.typeReturn === 1 ? "konsinyasi" : "kadaluarsa",
+      quantity: item.qty,
+      weightType: item.product?.unit || "pieces",
+      returnPrice: item.priceReturn,
+      returnReason: item.notes,
+      returnDate: item.returnDate,
+      statusReturn: item.statusReturn,
+    });
+    setItemFound(true);
+    setEditReturnId(item.returnId);
+    clearMessages();
+  };
+
+  const handleDelete = async (returnId: number) => {
+    if (!confirm("Apakah Anda yakin ingin menghapus return ini?")) return;
+
+    try {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/transactions/returnProduct/delete/${returnId}`, {
+        method: "DELETE",
+        headers: {
+          Authorization: `Bearer ${localStorage.getItem("admin_token")}`,
+        },
+      });
+
+      if (response.ok) {
+        setSubmitSuccess("Data return berhasil dihapus");
+        fetchReturnData(); 
+      } else {
+        const errorData = await response.json();
+        setSubmitError(errorData?.message || `Gagal menghapus return (Error ${response.status})`);
+      }
+    } catch (error) {
+      console.error(error);
+      setSubmitError("Gagal menghubungi API untuk menghapus data return");
+    }
+  };
+
 
   return (
     <div className="p-6">
@@ -520,6 +579,27 @@ const ReturnBarang: React.FC = () => {
                   />
                 </div>
 
+                {itemFound && (
+                  <div>
+                    <label htmlFor="statusReturn" className="block text-sm font-medium text-gray-700 mb-2">
+                      Status Return *
+                    </label>
+                    <select
+                      id="statusReturn"
+                      name="statusReturn"
+                      value={formData.statusReturn}
+                      onChange={handleInputChange}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-black"
+                      required
+                    >
+                      <option value={0}>Batal</option>
+                      <option value={1}>Proses</option>
+                      <option value={2}>Ditolak</option>
+                      <option value={3}>Berhasil</option>
+                    </select>
+                  </div>
+                )}
+
                 {/* Tombol Aksi */}
                 <div className="flex justify-end space-x-3 pt-4 border-t border-gray-200">
                   <button
@@ -561,6 +641,86 @@ const ReturnBarang: React.FC = () => {
             )}
           </form>
         </div>
+         <div className="mt-8">
+            <h3 className="text-lg font-semibold text-gray-700 mb-4">Data Return Barang</h3>
+            {isLoadingReturn ? (
+              <p className="text-gray-500">Memuat data...</p>
+            ) : returnError ? (
+              <p className="text-red-600">{returnError}</p>
+            ) : returnData.length === 0 ? (
+              <p className="text-gray-500">Belum ada data return.</p>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="min-w-full border border-gray-200 rounded-md">
+                  <thead className="bg-gray-100">
+                    <tr>
+                      <th className="px-4 py-2 border-b text-left text-sm text-gray-600">Kode Return</th>
+                      <th className="px-4 py-2 border-b text-left text-sm text-gray-600">Nama Barang</th>
+                      <th className="px-4 py-2 border-b text-left text-sm text-gray-600">Qty</th>
+                      <th className="px-4 py-2 border-b text-left text-sm text-gray-600">Harga Return</th>
+                      <th className="px-4 py-2 border-b text-left text-sm text-gray-600">Tipe Return</th>
+                      <th className="px-4 py-2 border-b text-left text-sm text-gray-600">Tanggal Return</th>
+                      <th className="px-4 py-2 border-b text-left text-sm text-gray-600">Catatan</th>
+                      <th className="px-4 py-2 border-b text-left text-sm text-gray-600">Status</th>
+                      <th className="px-4 py-2 border-b text-left text-sm text-gray-600">Aksi</th>
+                    </tr>
+                  </thead>
+                <tbody>
+                    {returnData.map((item) => (
+                      <tr key={item.returnId} className="hover:bg-gray-50">
+                        <td className="px-4 py-2 border-b text-sm text-gray-700">{item.returnCode}</td>
+                        <td className="px-4 py-2 border-b text-sm text-gray-700">{item.product?.name || "-"}</td>
+                        <td className="px-4 py-2 border-b text-sm text-gray-700">{item.qty}</td>
+                        <td className="px-4 py-2 border-b text-sm text-gray-700">Rp {item.priceReturn}</td>
+                        <td className="px-4 py-2 border-b text-sm text-gray-700">{item.typeReturn === 1 ? "Konsinyasi" : "Kadaluarsa"}</td>
+                        <td className="px-4 py-2 border-b text-sm text-gray-700">{item.returnDate}</td>
+                        <td className="px-4 py-2 border-b text-sm text-gray-700">{item.notes}</td>
+                        <td className="px-4 py-2 border-b text-sm">
+                          {item.statusReturn === 0 && (
+                            <span className="px-2 py-1 text-xs font-medium rounded bg-gray-100 text-gray-600">
+                              Batal
+                            </span>
+                          )}
+                          {item.statusReturn === 1 && (
+                            <span className="px-2 py-1 text-xs font-medium rounded bg-blue-100 text-blue-600">
+                              Proses
+                            </span>
+                          )}
+                          {item.statusReturn === 2 && (
+                            <span className="px-2 py-1 text-xs font-medium rounded bg-red-100 text-red-600">
+                              Ditolak
+                            </span>
+                          )}
+                          {item.statusReturn === 3 && (
+                            <span className="px-2 py-1 text-xs font-medium rounded bg-green-100 text-green-600">
+                              Berhasil
+                            </span>
+                          )}
+                        </td>
+
+                        <td className="px-4 py-2 border-b text-sm text-gray-700 flex gap-2">
+                          <button
+                            type="button"
+                            onClick={() => handleEdit(item)}
+                            className="px-2 py-1 bg-yellow-500 text-white rounded hover:bg-yellow-600 text-xs flex items-center gap-1"
+                          >
+                            Edit
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleDelete(item.returnId)}
+                            className="px-2 py-1 bg-red-500 text-white rounded hover:bg-red-600 text-xs flex items-center gap-1"
+                          >
+                            Delete
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
       </div>
     </div>
   );

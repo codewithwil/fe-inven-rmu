@@ -10,6 +10,7 @@
   },
   "dependencies": {
     "@formkit/auto-animate": "^0.8.2",
+    "axios": "^1.12.2",
     "framer-motion": "^12.19.2",
     "lucide-react": "^0.536.0",
     "next": "15.3.2",
@@ -18,6 +19,7 @@
     "react-icons": "^5.5.0",
     "react-intersection-observer": "^9.16.0",
     "react-slick": "^0.30.3",
+    "react-toastify": "^11.0.5",
     "slick-carousel": "^1.8.1",
     "xlsx": "^0.18.5"
   },
@@ -27,6 +29,7 @@
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "@types/react-slick": "^0.23.13",
+    "@types/react-toastify": "^4.0.2",
     "tailwindcss": "^4",
     "typescript": "^5"
   }
