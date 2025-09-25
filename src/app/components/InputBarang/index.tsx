@@ -331,7 +331,7 @@ const handleBarcodeBlur = async () => {
           <form onSubmit={handleSubmit} className="p-6 space-y-6">
             {/* Kategori & Supplier */}
             <div className="grid grid-cols-2 gap-4">
-              <div>
+              <div className="text-gray-700">
                 <label>Kategori *</label>
                 <select
                   name="category_id"
@@ -348,7 +348,7 @@ const handleBarcodeBlur = async () => {
                   ))}
                 </select>
               </div>
-              <div>
+            <div className="text-gray-700">
                 <label>Supplier *</label>
                 <select
                   name="supplier_id"
@@ -369,7 +369,7 @@ const handleBarcodeBlur = async () => {
 
             {/* Nama & Barcode */}
             <div className="grid grid-cols-2 gap-4">
-              <div>
+            <div className="text-gray-700">
                 <label>Nama Barang *</label>
                 <input
                   type="text"
@@ -380,7 +380,7 @@ const handleBarcodeBlur = async () => {
                   required
                 />
               </div>
-              <div>
+             <div className="text-gray-700">
                 <label>Barcode *</label>
                 <div className="flex gap-2">
                   <input
@@ -403,7 +403,7 @@ const handleBarcodeBlur = async () => {
             </div>
 
             <div className="grid grid-cols-2 gap-4">
-              <div>
+             <div className="text-gray-700">
                 <label>Jenis Barang *</label>
                 <select
                   name="type"
@@ -417,7 +417,7 @@ const handleBarcodeBlur = async () => {
                 </select>
               </div>
 
-              <div>
+              <div className="text-gray-700">
                 <label>Jenis Pembelian *</label>
                 <select
                   name="typePurchase"
@@ -433,7 +433,7 @@ const handleBarcodeBlur = async () => {
 
             {/* Tanggal Expire & Invoice */}
             <div className="grid grid-cols-2 gap-4">
-              <div>
+              <div className="text-gray-700">
                 <label>Tanggal Expire *</label>
                 <input
                   type="date"
@@ -444,7 +444,7 @@ const handleBarcodeBlur = async () => {
                   required
                 />
               </div>
-              <div>
+               <div className="text-gray-700">
                 <label>Invoice No *</label>
                 <input
                   type="text"
@@ -459,7 +459,7 @@ const handleBarcodeBlur = async () => {
 
             {/* Stok Minimum & Maksimum */}
             <div className="grid grid-cols-2 gap-4">
-              <div>
+              <div className="text-gray-700">
                 <label>Stok Minimum</label>
                 <input
                   type="number"
@@ -469,7 +469,7 @@ const handleBarcodeBlur = async () => {
                   className="w-full border rounded p-2"
                 />
               </div>
-              <div>
+              <div className="text-gray-700">
                 <label>Stok Maksimum</label>
                 <input
                   type="number"
@@ -482,7 +482,7 @@ const handleBarcodeBlur = async () => {
             </div>
 
             {/* Deskripsi */}
-            <div>
+            <div className="text-gray-700">
               <label>Deskripsi</label>
               <textarea
                 name="description"
@@ -494,7 +494,7 @@ const handleBarcodeBlur = async () => {
 
             {/* Harga */}
             <div className="grid grid-cols-2 gap-4">
-              <div>
+               <div className="text-gray-700">
                 <label>Harga Beli *</label>
                 <input
                   type="number"
@@ -505,7 +505,7 @@ const handleBarcodeBlur = async () => {
                   required
                 />
               </div>
-              <div>
+              <div className="text-gray-700">
                 <label>Harga Jual *</label>
                 <input
                   type="number"
@@ -520,7 +520,7 @@ const handleBarcodeBlur = async () => {
 
             {/* Qty & Satuan */}
             <div className="grid grid-cols-2 gap-4">
-              <div>
+             <div className="text-gray-700">
                 <label>Qty *</label>
                 <input
                   type="number"
@@ -530,7 +530,7 @@ const handleBarcodeBlur = async () => {
                   className="w-full border rounded p-2"
                 />
               </div>
-              <div>
+               <div className="text-gray-700">
                 <label>Satuan *</label>
                 <select
                   name="unit"
@@ -547,7 +547,7 @@ const handleBarcodeBlur = async () => {
             </div>
 
             {/* Foto */}
-            <div>
+             <div className="text-gray-700">
               <label>Foto</label>
               <input type="file" accept="image/*" onChange={handleFileChange} />
             </div>
