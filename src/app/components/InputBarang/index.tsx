@@ -57,6 +57,7 @@ interface FormData {
   type: 1 | 2 | 3;
   purchase_price: number;
   selling_price: number;
+  member_price: number; 
   typePurchase: 1 | 2;
   unit: "pcs" | "gram" | "kg" | "ml";
   description: string;
@@ -64,6 +65,7 @@ interface FormData {
   qty: number;
   min_stock: number;
   max_stock: number;
+  point: number; 
 }
 
 const InputBarang: React.FC = () => {
@@ -77,6 +79,7 @@ const InputBarang: React.FC = () => {
     type: 1,
     purchase_price: 0,
     selling_price: 0,
+    member_price: 0, 
     typePurchase: 1,
     unit: "pcs",
     description: "",
@@ -84,6 +87,7 @@ const InputBarang: React.FC = () => {
     qty: 0,
     min_stock: 0,
     max_stock: 0,
+    point: 0,      
   });
 
   const [categories, setCategories] = useState<Category[]>([]);
@@ -221,6 +225,7 @@ const InputBarang: React.FC = () => {
       type: (prod as any).type || 1,
       purchase_price: prod.purchase_price || 0,
       selling_price: prod.selling_price || 0,
+      member_price: (prod as any).member_price || 0, 
       typePurchase: (prod as any).typePurchase || 1,
       unit: (prod.unit as any) || "pcs",
       description: (prod as any).description || "",
@@ -228,6 +233,7 @@ const InputBarang: React.FC = () => {
       qty: prod.qty || 0,
       min_stock: (prod as any).min_stock || 0,
       max_stock: (prod as any).max_stock || 0,
+      point: (prod as any).point || 0, 
     });
     setEditingId(prod.productId);
     window.scrollTo({ top: 0, behavior: "smooth" });
@@ -260,6 +266,7 @@ const InputBarang: React.FC = () => {
       type: 1,
       purchase_price: 0,
       selling_price: 0,
+      member_price: 0,
       typePurchase: 1,
       unit: "pcs",
       description: "",
@@ -267,6 +274,7 @@ const InputBarang: React.FC = () => {
       qty: 0,
       min_stock: 0,
       max_stock: 0,
+      point: 0,
     });
     setEditingId(null);
   };
@@ -297,13 +305,14 @@ const handleBarcodeBlur = async () => {
         type: (found as any).type || 1,
         purchase_price: Number(found.purchase_price) || 0,
         selling_price: Number(found.selling_price) || 0,
+        member_price: Number((found as any).member_price) || 0,
         typePurchase: (found as any).typePurchase || 1,
         unit: (found.unit as any) || "pcs",
         description: (found.description as any) || "",
         qty: found.qty || 0,
         min_stock: (found.min_stock as any) || 0,
         max_stock: (found.max_stock as any) || 0,
-        // photo tetap null karena user bisa upload ulang
+        point: Number((found as any).point) || 0,
       }));
       toast.info("Data produk sebelumnya berhasil dimuat!");
     }
@@ -517,7 +526,29 @@ const handleBarcodeBlur = async () => {
                 />
               </div>
             </div>
-
+            <div className="grid grid-cols-2 gap-4">
+              <div className="text-gray-700">
+                <label>Harga Member *</label>
+                <input
+                  type="number"
+                  name="member_price"
+                  value={formData.member_price}
+                  onChange={handleInputChange}
+                  className="w-full border rounded p-2"
+                  required
+                />
+              </div>
+              <div className="text-gray-700">
+                <label>Point</label>
+                <input
+                  type="number"
+                  name="point"
+                  value={formData.point}
+                  onChange={handleInputChange}
+                  className="w-full border rounded p-2"
+                />
+              </div>
+            </div>
             {/* Qty & Satuan */}
             <div className="grid grid-cols-2 gap-4">
              <div className="text-gray-700">
@@ -568,7 +599,7 @@ const handleBarcodeBlur = async () => {
         </div>
 
         {/* Tabel Barang */}
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200">
+        <div className="bg-white r text-gray-700 ounded-lg shadow-sm border border-gray-200">
           <div className="px-6 py-4 border-b border-gray-200 flex justify-between items-center">
             <h2 className="text-xl font-semibold text-gray-800">Daftar Barang</h2>
             <input

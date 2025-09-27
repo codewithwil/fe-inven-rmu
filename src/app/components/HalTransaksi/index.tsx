@@ -2,6 +2,15 @@
 
 import React, { useState, useRef } from "react";
 
+interface Member {
+  id: string;
+  code: string;
+  name: string;
+  phone: string;
+  point: number;
+}
+
+
 interface TierPrice {
   minQuantity: number;
   price: number;
@@ -17,11 +26,6 @@ interface TransactionItem {
   unitPrice: number;
   totalPrice: number;
   weightType: "gram" | "pieces" | "bungkus" | "mililiter";
-}
-
-interface Member {
-  id: string;
-  bonusPoints: number;
 }
 
 interface Transaction {
@@ -68,28 +72,42 @@ const TransaksiPage: React.FC = () => {
     }
 
     try {
-      // API call to get item by barcode
-      const response = await fetch(`/api/barang/${barcode}`, {
-        headers: {
-          Authorization: `Bearer ${localStorage.getItem("admin_token")}`,
-        },
-      });
+      const response = await fetch(
+        `${process.env.NEXT_PUBLIC_API_URL}/resources/product?search=${barcode}`,
+        {
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem("admin_token")}`,
+          },
+        }
+      );
 
       if (!response.ok) {
         alert("Barang tidak ditemukan");
         return;
       }
 
-      const barang = await response.json();
+      const result = await response.json();
+      const barang =
+      result?.data?.product?.data && result.data.product.data.length > 0
+        ? result.data.product.data[0]
+        : null;
 
-      // Check if item already exists in cart
-      const existingItemIndex = items.findIndex((item) => item.barcode === barcode);
+      if (!barang) {
+        alert("Barang tidak ditemukan");
+        return;
+      }
+
+      // cek apakah sudah ada di keranjang
+      const existingItemIndex = items.findIndex((item) => item.barcode === barang.barcode);
 
       if (existingItemIndex >= 0) {
-        // Update existing item quantity
         const updatedItems = [...items];
         const updatedQuantity = updatedItems[existingItemIndex].quantity + quantity;
-        const unitPrice = calculateTierPrice(barang.basePrice, barang.tierPrices || [], updatedQuantity);
+        const unitPrice = calculateTierPrice(
+          barang.member_price ?? barang.selling_price,
+          barang.tierPrices || [],
+          updatedQuantity
+        );
 
         updatedItems[existingItemIndex] = {
           ...updatedItems[existingItemIndex],
@@ -100,32 +118,37 @@ const TransaksiPage: React.FC = () => {
 
         setItems(updatedItems);
       } else {
-        // Add new item to cart
-        const unitPrice = calculateTierPrice(barang.basePrice, barang.tierPrices || [], quantity);
+        const unitPrice = calculateTierPrice(
+          barang.member_price ?? barang.selling_price,
+          barang.tierPrices || [],
+          quantity
+        );
+
         const newItem: TransactionItem = {
-          id: `${barcode}_${Date.now()}`,
-          barcode,
+          id: `${barang.productId}_${Date.now()}`,
+          barcode: barang.barcode,
           name: barang.name,
-          basePrice: barang.basePrice,
+          basePrice: barang.member_price ?? barang.selling_price,
           tierPrices: barang.tierPrices || [],
           quantity,
           unitPrice,
           totalPrice: unitPrice * quantity,
-          weightType: barang.weightType,
+          weightType: barang.unit || "pieces",
         };
 
         setItems([...items, newItem]);
       }
 
-      // Reset inputs
+      // reset input
       setBarcodeInput("");
       setQuantityInput(1);
       barcodeInputRef.current?.focus();
     } catch (error) {
       console.error("Error adding item:", error);
-      alert("Terjadi kesalahan saat menambahkan barang");
+      alert("Terjadi kesalahan saat mengambil barang");
     }
   };
+
 
   const removeItem = (itemId: string) => {
     setItems(items.filter((item) => item.id !== itemId));
@@ -153,50 +176,60 @@ const TransaksiPage: React.FC = () => {
     );
   };
 
-  const searchMember = async (memberId: string) => {
-    if (!memberId.trim()) {
+  const searchMember = async (keyword: string) => {
+    if (!keyword.trim()) {
       setMember(null);
       return;
     }
 
     try {
-      // API call to external web app for member data
-      const response = await fetch(`/api/external/members/${memberId}`, {
-        headers: {
-          Authorization: `Bearer ${localStorage.getItem("admin_token")}`,
-        },
-      });
+      const response = await fetch(
+        `${process.env.NEXT_PUBLIC_API_URL}/people/member?search=${encodeURIComponent(keyword)}`,
+        {
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem("admin_token")}`,
+          },
+        }
+      );
 
       if (response.ok) {
-        const memberData = await response.json();
+        const result = await response.json();
+        const members = result?.data?.member || [];
+
+        if (members.length === 0) {
+          setMember(null);
+          alert("Member tidak ditemukan");
+          return;
+        }
+
+        // kalau hasilnya lebih dari 1, untuk sekarang ambil pertama aja
+        const m = members[0];
+
         setMember({
-          id: memberData.id,
-          bonusPoints: memberData.bonusPoints || 0,
+          id: m.memberId,
+          point: m.bonusPoints || 0, // kalau ada di API
+          code: m.memberCode,              // simpan code buat ditampilkan
+          name: m.name,
+          phone: m.phone,
         });
       } else {
         setMember(null);
-        alert("Member tidak ditemukan");
+        alert("Gagal mengambil data member");
       }
     } catch (error) {
       console.error("Error searching member:", error);
       setMember(null);
-      alert("Gagal mencari data member");
+      alert("Terjadi kesalahan saat mencari data member");
     }
   };
+
 
   const calculateSubtotal = () => {
     return items.reduce((total, item) => total + item.totalPrice, 0);
   };
 
-  const calculateMemberBonus = () => {
-    if (!member) return 0;
-    const subtotal = calculateSubtotal();
-    // 1% bonus for members
-    return Math.floor(subtotal * 0.01);
-  };
-
   const calculateTotal = () => {
-    return calculateSubtotal() - calculateMemberBonus();
+    return calculateSubtotal();
   };
 
   const processTransaction = async () => {
@@ -209,50 +242,38 @@ const TransaksiPage: React.FC = () => {
 
     try {
       const transactionData = {
-        id: transactionId,
-        items: items.map((item) => ({
-          barcode: item.barcode,
-          name: item.name,
-          quantity: item.quantity,
-          unitPrice: item.unitPrice,
-          totalPrice: item.totalPrice,
-        })),
+        member_id: member?.id || null,
+        purchaseDate: new Date().toISOString().split("T")[0], 
+        purchaseType:
+          paymentMethod === "cash"
+            ? 1
+            : paymentMethod === "transfer"
+            ? 2
+            : 3, // mapping ke constant Laravel
         subtotal: calculateSubtotal(),
-        memberBonus: calculateMemberBonus(),
-        total: calculateTotal(),
-        paymentMethod,
-        memberId: member?.id,
-        createdAt: new Date().toISOString(),
+        items: items.map((item) => ({
+          product_id: item.id.split("_")[0], // ambil product_id asli dari barcode/id
+          qty: item.quantity,
+          price: item.unitPrice,
+        })),
       };
 
-      const response = await fetch("/api/transactions", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${localStorage.getItem("admin_token")}`,
-        },
-        body: JSON.stringify(transactionData),
-      });
+      const response = await fetch(
+        `${process.env.NEXT_PUBLIC_API_URL}/transactions/outProduct/store`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${localStorage.getItem("admin_token")}`,
+          },
+          body: JSON.stringify(transactionData),
+        }
+      );
 
       if (response.ok) {
         const result = await response.json();
         setCurrentTransaction(result);
-
-        // Update member bonus points if member exists
-        if (member) {
-          await fetch(`/api/external/members/${member.id}/bonus`, {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-              Authorization: `Bearer ${localStorage.getItem("admin_token")}`,
-            },
-            body: JSON.stringify({ points: calculateMemberBonus() }),
-          });
-        }
-
         alert("Transaksi berhasil diproses!");
-
-        // Reset form
         resetTransaction();
       } else {
         const error = await response.json();
@@ -265,6 +286,7 @@ const TransaksiPage: React.FC = () => {
       setIsProcessing(false);
     }
   };
+
 
   const printReceipt = () => {
     if (!currentTransaction) return;
@@ -504,10 +526,14 @@ const TransaksiPage: React.FC = () => {
                     </div>
                     {member && (
                       <div className="bg-green-50 p-3 rounded border border-green-200">
-                        <div className="text-sm font-medium text-green-800">Member ID: {member.id}</div>
-                        <div className="text-xs text-green-600">Bonus Points: {member.bonusPoints}</div>
+                        <div className="text-sm font-medium text-green-800">
+                          {member.code} - {member.name}
+                        </div>
+                        <div className="text-xs text-green-600">Telp: {member.phone}</div>
+                        <div className="text-xs text-green-600">Bonus Points: {member.point}</div>
                       </div>
                     )}
+
                   </div>
                 </div>
 
@@ -533,12 +559,6 @@ const TransaksiPage: React.FC = () => {
                       <span>Subtotal:</span>
                       <span className="text-black">Rp {calculateSubtotal().toLocaleString("id-ID")}</span>
                     </div>
-                    {member && calculateMemberBonus() > 0 && (
-                      <div className="flex justify-between text-sm text-green-600">
-                        <span>Bonus Member (1%):</span>
-                        <span>-Rp {calculateMemberBonus().toLocaleString("id-ID")}</span>
-                      </div>
-                    )}
                     <div className="flex justify-between font-medium text-lg border-t pt-2">
                       <span>Total:</span>
                       <span className="text-black">Rp {calculateTotal().toLocaleString("id-ID")}</span>
@@ -563,6 +583,14 @@ const TransaksiPage: React.FC = () => {
             </div>
           </div>
         </div>
+         <div className="mt-6 text-center">
+      <a
+        href="/transactions/outProduct"
+        className="inline-block px-5 py-3 bg-indigo-500 text-white rounded-md shadow hover:bg-indigo-600 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 font-medium"
+      >
+        Lihat Semua Transaksi Produk
+      </a>
+    </div>
       </div>
     </div>
   );
