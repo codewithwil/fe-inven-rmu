@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useRef } from "react";
+import AllTransactionsList from "./AllTransactionsList";
 
 interface Member {
   id: string;
@@ -49,8 +50,46 @@ const TransaksiPage: React.FC = () => {
   const [memberIdInput, setMemberIdInput] = useState("");
   const [isProcessing, setIsProcessing] = useState(false);
   const [currentTransaction, setCurrentTransaction] = useState<Transaction | null>(null);
-
+  const [showOutProduct, setShowOutProduct] = useState(false);
   const barcodeInputRef = useRef<HTMLInputElement>(null);
+  const [editTransaction, setEditTransaction] = useState<AllTransactionsList | null>(null);
+  const [isEditing, setIsEditing] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
+
+  const loadTransactionForEdit = (trx: AllTransactionsList) => {
+    setIsEditing(true);
+    setEditingId(trx.outProductId.toString());
+
+    // mapping member
+    setMember({
+      id: trx.member.memberId,
+      code: trx.member.memberCode,
+      name: trx.member.name,
+      phone: trx.member.phone,
+      point: 0,
+    });
+
+    // mapping items
+    setItems(
+      trx.items.map((it) => ({
+        id: `${it.product.productId}_${Date.now()}`,
+        barcode: it.product.barcode,
+        name: it.product.name,
+        basePrice: parseFloat(it.price),
+        tierPrices: [],
+        quantity: it.qty,
+        unitPrice: parseFloat(it.price),
+        totalPrice: parseFloat(it.price) * it.qty,
+        weightType: "pieces",
+      }))
+    );
+
+    if (trx.purchaseType === 1) setPaymentMethod("cash");
+    else if (trx.purchaseType === 2) setPaymentMethod("transfer");
+    else setPaymentMethod("credit");
+
+    setShowOutProduct(false);
+  };
 
   const calculateTierPrice = (basePrice: number, tierPrices: TierPrice[], quantity: number): number => {
     // Sort tier prices by minQuantity descending to get the highest applicable tier
@@ -202,12 +241,11 @@ const TransaksiPage: React.FC = () => {
           return;
         }
 
-        // kalau hasilnya lebih dari 1, untuk sekarang ambil pertama aja
         const m = members[0];
 
         setMember({
           id: m.memberId,
-          point: m.bonusPoints || 0, // kalau ada di API
+          point: m.bonusPoints || 0, 
           code: m.memberCode,              // simpan code buat ditampilkan
           name: m.name,
           phone: m.phone,
@@ -243,38 +281,38 @@ const TransaksiPage: React.FC = () => {
     try {
       const transactionData = {
         member_id: member?.id || null,
-        purchaseDate: new Date().toISOString().split("T")[0], 
+        purchaseDate: new Date().toISOString().split("T")[0],
         purchaseType:
-          paymentMethod === "cash"
-            ? 1
-            : paymentMethod === "transfer"
-            ? 2
-            : 3, // mapping ke constant Laravel
+          paymentMethod === "cash" ? 1 :
+          paymentMethod === "transfer" ? 2 : 3,
         subtotal: calculateSubtotal(),
         items: items.map((item) => ({
-          product_id: item.id.split("_")[0], // ambil product_id asli dari barcode/id
+          product_id: item.id.split("_")[0],
           qty: item.quantity,
           price: item.unitPrice,
         })),
       };
 
-      const response = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL}/transactions/outProduct/store`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${localStorage.getItem("admin_token")}`,
-          },
-          body: JSON.stringify(transactionData),
-        }
-      );
+      const url = isEditing
+        ? `${process.env.NEXT_PUBLIC_API_URL}/transactions/outProduct/update/${editingId}`
+        : `${process.env.NEXT_PUBLIC_API_URL}/transactions/outProduct/store`;
+
+      const response = await fetch(url, {
+        method: "POST", 
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${localStorage.getItem("admin_token")}`,
+        },
+        body: JSON.stringify(transactionData),
+      });
 
       if (response.ok) {
         const result = await response.json();
         setCurrentTransaction(result);
-        alert("Transaksi berhasil diproses!");
+        alert(isEditing ? "Transaksi berhasil diupdate!" : "Transaksi berhasil diproses!");
         resetTransaction();
+        setIsEditing(false);
+        setEditingId(null);
       } else {
         const error = await response.json();
         alert(`Error: ${error.message || "Gagal memproses transaksi"}`);
@@ -286,7 +324,6 @@ const TransaksiPage: React.FC = () => {
       setIsProcessing(false);
     }
   };
-
 
   const printReceipt = () => {
     if (!currentTransaction) return;
@@ -584,12 +621,12 @@ const TransaksiPage: React.FC = () => {
           </div>
         </div>
          <div className="mt-6 text-center">
-      <a
-        href="/transactions/outProduct"
-        className="inline-block px-5 py-3 bg-indigo-500 text-white rounded-md shadow hover:bg-indigo-600 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 font-medium"
-      >
-        Lihat Semua Transaksi Produk
-      </a>
+          {showOutProduct ? (
+          <AllTransactionsList onEdit={loadTransactionForEdit} />
+        ) : (
+          <button onClick={() => setShowOutProduct(true)}>Lihat Semua Transaksi</button>
+        )}
+
     </div>
       </div>
     </div>

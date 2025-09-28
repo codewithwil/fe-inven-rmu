@@ -20,6 +20,7 @@ interface Member {
   phone: string;
   address: string;
   region: Region;
+  points: string;
 }
 
 const AllMember: React.FC = () => {
@@ -77,6 +78,7 @@ const AllMember: React.FC = () => {
                     <th className="border border-gray-300 px-4 py-2">NIK</th>
                     <th className="border border-gray-300 px-4 py-2">No. HP</th>
                     <th className="border border-gray-300 px-4 py-2">Alamat</th>
+                    <th className="border border-gray-300 px-4 py-2">Point Member</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -88,6 +90,9 @@ const AllMember: React.FC = () => {
                       <td className="border border-gray-300 px-4 py-2">{m.nik}</td>
                       <td className="border border-gray-300 px-4 py-2">{m.phone}</td>
                       <td className="border border-gray-300 px-4 py-2">{m.address}</td>
+                      <td className="border border-gray-300 px-4 py-2">
+                        {Math.floor(parseFloat(m.points))}
+                      </td>
                     </tr>
                   ))}
                 </tbody>
