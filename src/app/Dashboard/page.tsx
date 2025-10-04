@@ -59,7 +59,7 @@ type MenuItemId =
   | "input-supplier"
   | "return-barang"
   | "hal-transaksi"
-  | "transaksi-piutang"
+  | "transaksi-piutang-member"
   | "stok-barang"
   | "lap-barang-return"
   | "lap-barang-laku"
@@ -177,8 +177,8 @@ const Dashboard = () => {
           icon: <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />,
         },
         {
-          id: "transaksi-piutang" as MenuItemId,
-          label: "Transaksi Piutang",
+          id: "transaksi-piutang-member" as MenuItemId,
+          label: "Transaksi Piutang Member",
           icon: <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z" />,
         },
         {
@@ -355,7 +355,7 @@ const Dashboard = () => {
       // Category Transaksi
       case "hal-transaksi":
         return <HalTransaksi />;
-      case "transaksi-piutang":
+      case "transaksi-piutang-member":
         return <TransaksiPiutang />;
       case "stok-barang":
         return <StokBarang />;
@@ -408,7 +408,7 @@ const Dashboard = () => {
       "input-supplier": "Manage supplier information and data",
       "return-barang": "Process returned items",
       "hal-transaksi": "Process sales transactions and print receipts",
-      "transaksi-piutang": "Process receivables transactions",
+      "transaksi-piutang-member": "Process receivables transactions",
       "stok-barang": "Monitor and manage inventory stock levels",
       "lap-barang-return": "View returned items reports",
       "lap-barang-laku": "View best selling items reports",
@@ -438,7 +438,7 @@ const Dashboard = () => {
       "input-supplier": "Input Supplier",
       "return-barang": "Return Barang",
       "hal-transaksi": "Halaman Transaksi",
-      "transaksi-piutang": "Transaksi Piutang",
+      "transaksi-piutang-member": "Transaksi Piutang",
       "stok-barang": "Stok Barang",
       "lap-barang-return": "Laporan Barang Return",
       "lap-barang-laku": "Laporan Barang Paling Laku",

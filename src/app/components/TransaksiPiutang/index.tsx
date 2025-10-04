@@ -1,77 +1,7 @@
-/*
-API ENDPOINTS DOCUMENTATION FOR BACKEND IMPLEMENTATION:
-
-1. GET /api/member-debts/{uniqueId}
-   Description: Get member debt details by unique ID
-   Headers: Authorization: Bearer {token}
-   Response: {
-     id: string,
-     memberId: string,
-     memberName: string,
-     uniqueId: string,
-     items: [
-       {
-         id: string,
-         transactionId: string,
-         itemName: string,
-         quantity: number,
-         unitPrice: number,
-         totalPrice: number,
-         createdAt: string
-       }
-     ],
-     totalDebt: number,
-     remainingDebt: number,
-     status: "unpaid" | "partial" | "paid",
-     createdAt: string,
-     dueDate: string
-   }
-
-2. GET /api/member-debts/{uniqueId}/payments
-   Description: Get payment history for a specific debt
-   Headers: Authorization: Bearer {token}
-   Response: {
-     payments: [
-       {
-         id: string,
-         debtId: string,
-         amount: number,
-         paymentMethod: "cash" | "transfer",
-         createdAt: string
-       }
-     ]
-   }
-
-3. POST /api/member-debt-payments
-   Description: Process a new debt payment
-   Headers: Authorization: Bearer {token}, Content-Type: application/json
-   Body: {
-     id: string,
-     debtId: string,
-     uniqueId: string,
-     memberId: string,
-     amount: number,
-     paymentMethod: "cash" | "transfer",
-     remainingDebtBefore: number,
-     remainingDebtAfter: number,
-     createdAt: string
-   }
-   Response: {
-     success: boolean,
-     paymentId: string,
-     message: string
-   }
-
-ERROR RESPONSES:
-- 404: Debt not found
-- 400: Invalid payment amount or validation errors
-- 401: Unauthorized (invalid token)
-- 500: Server error
-*/
-
 "use client";
 
 import React, { useState, useRef } from "react";
+import AllPiutangMember, { Debt } from "./allPiutangMember";
 
 interface DebtItem {
   id: string;
@@ -91,6 +21,7 @@ interface MemberDebt {
   items: DebtItem[];
   totalDebt: number;
   remainingDebt: number;
+  payments_sum_amount: number;
   status: "unpaid" | "partial" | "paid";
   createdAt: string;
   dueDate: string;
@@ -125,67 +56,109 @@ const PembayaranPiutangPage: React.FC = () => {
   const [isProcessing, setIsProcessing] = useState(false);
   const [currentPayment, setCurrentPayment] = useState<PaymentTransaction | null>(null);
   const [existingPayments, setExistingPayments] = useState<Payment[]>([]);
-
+  const token   = localStorage.getItem("admin_token");
   const uniqueIdInputRef = useRef<HTMLInputElement>(null);
+  const [showPiutangMember, setShowPiutangMember] = useState(false);
 
-  const searchDebt = async (uniqueId: string) => {
-    if (!uniqueId.trim()) {
-      alert("Masukkan Unique ID tagihan");
-      return;
-    }
+  const loadTransactionForEdit = (trx: Debt) => {
+    const debtData: MemberDebt = {
+      id: trx.debtId.toString(),
+      memberId: trx.partner.memberId.toString(),
+      memberName: trx.partner.name,
+      uniqueId: trx.debtId.toString(),
+      payments_sum_amount: Number(trx.total_paid) || 0,
+      items: [
+        {
+          id: trx.debtId.toString(),
+          transactionId: trx.debtId.toString(),
+          itemName: "Transaksi Produk",
+          quantity: 1,
+          unitPrice: Number(trx.amount),
+          totalPrice: Number(trx.amount),
+          createdAt: trx.created_at,
+        },
+      ],
+      totalDebt: Number(trx.amount),
+      remainingDebt: Number(trx.amount) - Number(trx.paid),
+      status:
+        Number(trx.paid) === 0
+          ? "unpaid"
+          : Number(trx.paid) < Number(trx.amount)
+          ? "partial"
+          : "paid",
+      createdAt: trx.created_at,
+      dueDate: trx.created_at,
+    };
+
+    setMemberDebt(debtData);
+    setShowPiutangMember(false); // balik ke halaman pembayaran
+  };
+
+  const searchDebt = async (search: string) => {
+    if (!search.trim()) return;
 
     setIsSearching(true);
+    setMemberDebt(null);
+    setExistingPayments([]);
+    setCurrentPayment(null);
 
     try {
-      // API call to get debt by unique ID
-      // GET /api/member-debts/{uniqueId}
-      const response = await fetch(`/api/member-debts/${uniqueId}`, {
-        method: "GET",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${localStorage.getItem("admin_token")}`,
-        },
-      });
-
-      if (!response.ok) {
-        if (response.status === 404) {
-          alert("Tagihan tidak ditemukan");
-        } else {
-          const errorData = await response.json();
-          alert(`Gagal mencari tagihan: ${errorData.message || "Unknown error"}`);
+      // Cari member pakai memberCode/nama/phone
+      const res = await fetch(
+        `${process.env.NEXT_PUBLIC_API_URL}/people/member/receivableMembers?search=${encodeURIComponent(search)}`,
+        {
+          headers: { Authorization: `Bearer ${token}` },
         }
-        setMemberDebt(null);
-        setExistingPayments([]);
-        return;
-      }
+      );
 
-      const debtData = await response.json();
-      setMemberDebt(debtData);
+      const data = await res.json();
 
-      // Get existing payments for this debt
-      // GET /api/member-debts/{uniqueId}/payments
-      const paymentsResponse = await fetch(`/api/member-debts/${uniqueId}/payments`, {
-        method: "GET",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${localStorage.getItem("admin_token")}`,
-        },
-      });
+      if (data?.data?.member && data.data.member.length > 0) {
+        const member = data.data.member[0];
+        const firstDebt = member.debts?.[0];
 
-      if (paymentsResponse.ok) {
-        const paymentsData = await paymentsResponse.json();
-        setExistingPayments(paymentsData.payments || []);
+        if (firstDebt) {
+          // Bentuk data supaya sesuai interface MemberDebt
+          const debtData: MemberDebt = {
+            id: firstDebt.debtId,
+            memberId: member.memberId,
+            memberName: member.name,
+            uniqueId: firstDebt.debtId.toString(), // kalau tidak ada uniqueId asli, pakai debtId
+            payments_sum_amount: firstDebt.payments_sum_amount || 0, 
+            items: [
+              {
+                id: firstDebt.debtId.toString(),
+                transactionId: firstDebt.debtable_id.toString(),
+                itemName: "Transaksi Produk", // default aja kalau nggak ada detail item
+                quantity: 1,
+                unitPrice: Number(firstDebt.amount),
+                totalPrice: Number(firstDebt.amount),
+                createdAt: firstDebt.created_at,
+              },
+            ],
+            totalDebt: Number(firstDebt.amount),
+            remainingDebt: Number(firstDebt.amount) - Number(firstDebt.paid),
+            status:
+              Number(firstDebt.paid) === 0
+                ? "unpaid"
+                : Number(firstDebt.paid) < Number(firstDebt.amount)
+                ? "partial"
+                : "paid",
+            createdAt: firstDebt.created_at,
+            dueDate: firstDebt.created_at, // kalau backend belum ada due_date
+          };
+
+          setMemberDebt(debtData);
+
+          // Belum ada endpoint payments → kosongin aja
+          setExistingPayments([]);
+        }
       } else {
-        setExistingPayments([]);
+        alert("Member atau tagihan tidak ditemukan");
       }
-
-      // Set default payment amount to remaining debt
-      setPaymentAmount(debtData.remainingDebt);
-    } catch (error) {
-      console.error("Error searching debt:", error);
-      alert("Terjadi kesalahan saat mencari tagihan");
-      setMemberDebt(null);
-      setExistingPayments([]);
+    } catch (err) {
+      console.error(err);
+      alert("Terjadi kesalahan saat mencari data");
     } finally {
       setIsSearching(false);
     }
@@ -210,33 +183,29 @@ const PembayaranPiutangPage: React.FC = () => {
     setIsProcessing(true);
 
     try {
-      const paymentData = {
-        id: paymentId,
-        debtId: memberDebt.id,
-        uniqueId: memberDebt.uniqueId,
-        memberId: memberDebt.memberId,
+      const body = {
         amount: paymentAmount,
-        paymentMethod,
-        remainingDebtBefore: memberDebt.remainingDebt,
-        remainingDebtAfter: memberDebt.remainingDebt - paymentAmount,
-        createdAt: new Date().toISOString(),
+        paymentType: paymentMethod === "cash" ? 1 : 2, 
       };
 
-      // POST /api/member-debt-payments
-      const response = await fetch("/api/member-debt-payments", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${localStorage.getItem("admin_token")}`,
-        },
-        body: JSON.stringify(paymentData),
-      });
+      const response = await fetch(
+        `${process.env.NEXT_PUBLIC_API_URL}/transactions/receivableMember/pay/${memberDebt.id}`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${localStorage.getItem("admin_token")}`,
+          },
+          body: JSON.stringify(body),
+        }
+      );
+
+      const result = await response.json();
 
       if (response.ok) {
-        const result = await response.json();
-
+        alert("Pembayaran berhasil diproses!");
         setCurrentPayment({
-          id: paymentId,
+          id: `PAY${Date.now()}`,
           debtId: memberDebt.id,
           uniqueId: memberDebt.uniqueId,
           memberName: memberDebt.memberName,
@@ -246,17 +215,10 @@ const PembayaranPiutangPage: React.FC = () => {
           createdAt: new Date().toISOString(),
         });
 
-        alert("Pembayaran berhasil diproses!");
-
-        // Refresh debt data to get updated remaining balance
+        // refresh debt biar sisa hutang ke-update
         await searchDebt(memberDebt.uniqueId);
-
-        // Generate new payment ID for next transaction
-        const newPaymentId = `PAY${Date.now()}`;
-        // Note: In a real app, you'd update the paymentId state here
       } else {
-        const error = await response.json();
-        alert(`Error: ${error.message || "Gagal memproses pembayaran"}`);
+        alert(`Error: ${result.message || "Gagal memproses pembayaran"}`);
       }
     } catch (error) {
       console.error("Error processing payment:", error);
@@ -265,6 +227,7 @@ const PembayaranPiutangPage: React.FC = () => {
       setIsProcessing(false);
     }
   };
+
 
   const printReceipt = () => {
     if (!currentPayment || !memberDebt) return;
@@ -388,7 +351,7 @@ const PembayaranPiutangPage: React.FC = () => {
                         onChange={(e) => setUniqueIdInput(e.target.value)}
                         onKeyPress={handleKeyPress}
                         className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-black"
-                        placeholder="Masukkan Unique ID tagihan"
+                        placeholder="Masukkan Id Member/Anggota"
                         autoFocus
                       />
                     </div>
@@ -467,7 +430,7 @@ const PembayaranPiutangPage: React.FC = () => {
                           </div>
                           <div>
                             <div className="text-gray-600">Sudah Dibayar</div>
-                            <div className="font-medium text-green-600">Rp {calculateTotalPaid().toLocaleString("id-ID")}</div>
+                            <div className="font-medium text-green-600">Rp {memberDebt.payments_sum_amount.toLocaleString("id-ID")}</div>
                           </div>
                           <div>
                             <div className="text-gray-600">Sisa Tagihan</div>
@@ -588,6 +551,14 @@ const PembayaranPiutangPage: React.FC = () => {
               </div>
             </div>
           </div>
+        </div>
+          <div className="mt-6 text-center">
+          {showPiutangMember ? (
+            <AllPiutangMember onEdit={loadTransactionForEdit} />
+          ) : (
+            <button onClick={() => setShowPiutangMember(true)}>Lihat Semua piutang member</button>
+          )}
+
         </div>
       </div>
     </div>

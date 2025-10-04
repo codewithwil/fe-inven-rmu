@@ -1,14 +1,14 @@
 "use client";
 
 import React, { useState, useRef } from "react";
-import AllTransactionsList from "./AllTransactionsList";
+import AllTransactionsList, { OutProduct } from "./AllTransactionsList";
 
 interface Member {
   id: string;
   code: string;
   name: string;
   phone: string;
-  point: number;
+  points?: number;
 }
 
 
@@ -52,21 +52,20 @@ const TransaksiPage: React.FC = () => {
   const [currentTransaction, setCurrentTransaction] = useState<Transaction | null>(null);
   const [showOutProduct, setShowOutProduct] = useState(false);
   const barcodeInputRef = useRef<HTMLInputElement>(null);
-  const [editTransaction, setEditTransaction] = useState<AllTransactionsList | null>(null);
   const [isEditing, setIsEditing] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
 
-  const loadTransactionForEdit = (trx: AllTransactionsList) => {
+  const loadTransactionForEdit = (trx: OutProduct) => {
     setIsEditing(true);
     setEditingId(trx.outProductId.toString());
 
     // mapping member
     setMember({
-      id: trx.member.memberId,
+      id: trx.member.memberId.toString(),
       code: trx.member.memberCode,
       name: trx.member.name,
       phone: trx.member.phone,
-      point: 0,
+      points: trx.member.points ?? 0,
     });
 
     // mapping items
@@ -245,11 +244,13 @@ const TransaksiPage: React.FC = () => {
 
         setMember({
           id: m.memberId,
-          point: m.bonusPoints || 0, 
-          code: m.memberCode,              // simpan code buat ditampilkan
+          code: m.memberCode,              
           name: m.name,
           phone: m.phone,
+          points: m.points ? Number(m.points) : 0,
+
         });
+
       } else {
         setMember(null);
         alert("Gagal mengambil data member");
@@ -567,7 +568,7 @@ const TransaksiPage: React.FC = () => {
                           {member.code} - {member.name}
                         </div>
                         <div className="text-xs text-green-600">Telp: {member.phone}</div>
-                        <div className="text-xs text-green-600">Bonus Points: {member.point}</div>
+                        <div className="text-xs text-green-600">Bonus Points: {member.points}</div>
                       </div>
                     )}
 
@@ -620,14 +621,14 @@ const TransaksiPage: React.FC = () => {
             </div>
           </div>
         </div>
-         <div className="mt-6 text-center">
+        <div className="mt-6 text-center">
           {showOutProduct ? (
-          <AllTransactionsList onEdit={loadTransactionForEdit} />
-        ) : (
-          <button onClick={() => setShowOutProduct(true)}>Lihat Semua Transaksi</button>
-        )}
+            <AllTransactionsList onEdit={loadTransactionForEdit} />
+          ) : (
+            <button onClick={() => setShowOutProduct(true)}>Lihat Semua Transaksi</button>
+          )}
 
-    </div>
+        </div>
       </div>
     </div>
   );

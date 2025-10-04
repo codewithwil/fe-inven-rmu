@@ -1,145 +1,10 @@
-/*
-API ENDPOINTS DOCUMENTATION FOR BACKEND IMPLEMENTATION:
-
-1. GET /api/daily-transactions
-   Description: Mendapatkan data transaksi harian dengan detail item
-   Headers: Authorization: Bearer {token}
-   Query Parameters:
-   - startDate: string (YYYY-MM-DD) (wajib)
-   - endDate: string (YYYY-MM-DD) (wajib)
-   - categoryId: string (opsional)
-   - supplierId: string (opsional)
-   - itemId: string (opsional)
-   - paymentMethod: "cash" | "transfer" | "credit" | "all" (opsional, default: "all")
-   - transactionType: "sale" | "return" | "all" (opsional, default: "all")
-   - cashierName: string (opsional)
-   - minAmount: number (opsional)
-   - maxAmount: number (opsional)
-   - sortBy: "date" | "amount" | "quantity" | "profit" (opsional, default: "date")
-   - sortOrder: "asc" | "desc" (opsional, default: "desc")
-   - page: number (opsional, default: 1)
-   - pageSize: number (opsional, default: 50)
-   
-   Response: {
-     data: [
-       {
-         id: string,
-         transactionNumber: string,
-         date: string,
-         time: string,
-         cashierName: string,
-         customerName: string | null,
-         items: [
-           {
-             id: string,
-             barcode: string,
-             itemName: string,
-             categoryName: string,
-             supplierName: string,
-             quantity: number,
-             unitPrice: number,
-             totalPrice: number,
-             costPrice: number,
-             profit: number,
-             profitMargin: number
-           }
-         ],
-         subtotal: number,
-         discount: number,
-         tax: number,
-         totalAmount: number,
-         totalProfit: number,
-         paymentMethod: string,
-         amountPaid: number,
-         change: number,
-         transactionType: "sale" | "return",
-         notes: string | null,
-         createdAt: string,
-         updatedAt: string
-       }
-     ],
-     pagination: {
-       currentPage: number,
-       totalPages: number,
-       totalItems: number,
-       itemsPerPage: number
-     },
-     summary: {
-       totalTransactions: number,
-       totalRevenue: number,
-       totalProfit: number,
-       totalQuantity: number,
-       averageTransaction: number,
-       averageProfitMargin: number,
-       topSellingItems: [
-         {
-           itemName: string,
-           quantity: number,
-           revenue: number
-         }
-       ],
-       paymentMethodBreakdown: {
-         cash: { count: number, amount: number },
-         transfer: { count: number, amount: number },
-         credit: { count: number, amount: number }
-       },
-       hourlyBreakdown: [
-         {
-           hour: number,
-           transactionCount: number,
-           revenue: number
-         }
-       ]
-     },
-     periods: {
-       startDate: string,
-       endDate: string,
-       totalDays: number
-     }
-   }
-
-2. GET /api/cashiers
-   Description: Mendapatkan daftar kasir untuk dropdown filter
-   Headers: Authorization: Bearer {token}
-   Response: {
-     data: [
-       {
-         id: string,
-         name: string,
-         employeeCode: string
-       }
-     ]
-   }
-
-3. POST /api/daily-transactions/export
-   Description: Ekspor data transaksi harian ke CSV
-   Headers: Authorization: Bearer {token}, Content-Type: application/json
-   Body: {
-     startDate: string,
-     endDate: string,
-     categoryId: string,
-     supplierId: string,
-     itemId: string,
-     paymentMethod: string,
-     transactionType: string,
-     cashierName: string,
-     minAmount: number,
-     maxAmount: number,
-     sortBy: string,
-     sortOrder: string
-   }
-   Response: File CSV untuk didownload
-
-ERROR RESPONSES:
-- 400: Parameter filter tidak valid
-- 401: Tidak diotorisasi (token tidak valid)
-- 500: Error server
-*/
-
 "use client";
 
 import React, { useState, useEffect } from "react";
 import { Calendar, Download, Filter, Search, RefreshCw, TrendingUp, DollarSign, Package, Clock, Users, CreditCard, Receipt, Eye, EyeOff } from "lucide-react";
+import SummaryCardDailyTransac from "./summaryCard";
+import Pagination from "../Pagination/Pagination";
+import axios from "axios";
 
 interface TransactionItem {
   id: string;
@@ -178,13 +43,13 @@ interface DailyTransaction {
 }
 
 interface Category {
-  id: string;
+  categoryId: string;
   name: string;
   code: string;
 }
 
 interface Supplier {
-  id: string;
+  supplierId: string;
   name: string;
   code: string;
 }
@@ -195,35 +60,6 @@ interface Cashier {
   employeeCode: string;
 }
 
-interface TopSellingItem {
-  itemName: string;
-  quantity: number;
-  revenue: number;
-}
-
-interface PaymentMethodBreakdown {
-  cash: { count: number; amount: number };
-  transfer: { count: number; amount: number };
-  credit: { count: number; amount: number };
-}
-
-interface HourlyBreakdown {
-  hour: number;
-  transactionCount: number;
-  revenue: number;
-}
-
-interface ReportSummary {
-  totalTransactions: number;
-  totalRevenue: number;
-  totalProfit: number;
-  totalQuantity: number;
-  averageTransaction: number;
-  averageProfitMargin: number;
-  topSellingItems: TopSellingItem[];
-  paymentMethodBreakdown: PaymentMethodBreakdown;
-  hourlyBreakdown: HourlyBreakdown[];
-}
 
 interface Pagination {
   currentPage: number;
@@ -258,21 +94,6 @@ const LaporanTransaksiHarianPage: React.FC = () => {
   const [categories, setCategories] = useState<Category[]>([]);
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
   const [cashiers, setCashiers] = useState<Cashier[]>([]);
-  const [summary, setSummary] = useState<ReportSummary>({
-    totalTransactions: 0,
-    totalRevenue: 0,
-    totalProfit: 0,
-    totalQuantity: 0,
-    averageTransaction: 0,
-    averageProfitMargin: 0,
-    topSellingItems: [],
-    paymentMethodBreakdown: {
-      cash: { count: 0, amount: 0 },
-      transfer: { count: 0, amount: 0 },
-      credit: { count: 0, amount: 0 },
-    },
-    hourlyBreakdown: [],
-  });
   const [periods, setPeriods] = useState<ReportPeriods>({
     startDate: "",
     endDate: "",
@@ -307,7 +128,8 @@ const LaporanTransaksiHarianPage: React.FC = () => {
   const [showFilters, setShowFilters] = useState(false);
   const [apiStatus, setApiStatus] = useState<string>("");
   const [expandedTransactions, setExpandedTransactions] = useState<Set<string>>(new Set());
-
+  const API_URL = process.env.NEXT_PUBLIC_API_URL;
+  const token   = localStorage.getItem("admin_token");
   useEffect(() => {
     loadCategories();
     loadSuppliers();
@@ -317,25 +139,14 @@ const LaporanTransaksiHarianPage: React.FC = () => {
 
   const loadCategories = async () => {
     try {
-      const response = await fetch("/api/categories", {
-        headers: {
-          Authorization: `Bearer ${localStorage.getItem("admin_token")}`,
-        },
+      const { data } = await axios.get(`${API_URL}/resources/category?all=true`, {
+        headers: { Authorization: `Bearer ${token}` },
       });
-
-      if (response.ok) {
-        const contentType = response.headers.get("content-type");
-        if (contentType && contentType.includes("application/json")) {
-          const result = await response.json();
-          setCategories(result.data || []);
-          setApiStatus("API Tersambung");
-        } else {
-          console.log("API Kategori tidak tersedia, menggunakan data kosong");
-          setCategories([]);
-          setApiStatus("API Tidak Tersedia - Mode Demo");
-        }
+      
+      if (data?.data?.category) {
+      setCategories(data.data.category); 
+      setApiStatus("API Tersambung");
       } else {
-        console.log("Endpoint API Kategori tidak ditemukan");
         setCategories([]);
         setApiStatus("API Tidak Tersedia - Mode Demo");
       }
@@ -346,27 +157,14 @@ const LaporanTransaksiHarianPage: React.FC = () => {
     }
   };
 
+// Load Suppliers
   const loadSuppliers = async () => {
     try {
-      const response = await fetch("/api/suppliers", {
-        headers: {
-          Authorization: `Bearer ${localStorage.getItem("admin_token")}`,
-        },
+      const { data } = await axios.get(`${API_URL}/resources/supplier?all=true`, {
+        headers: { Authorization: `Bearer ${token}` },
       });
 
-      if (response.ok) {
-        const contentType = response.headers.get("content-type");
-        if (contentType && contentType.includes("application/json")) {
-          const result = await response.json();
-          setSuppliers(result.data || []);
-        } else {
-          console.log("API Supplier tidak tersedia, menggunakan data kosong");
-          setSuppliers([]);
-        }
-      } else {
-        console.log("Endpoint API Supplier tidak ditemukan");
-        setSuppliers([]);
-      }
+      setSuppliers(data?.data.supplier || []);
     } catch (error) {
       console.error("Error memuat supplier:", error);
       setSuppliers([]);
@@ -375,161 +173,90 @@ const LaporanTransaksiHarianPage: React.FC = () => {
 
   const loadCashiers = async () => {
     try {
-      const response = await fetch("/api/cashiers", {
-        headers: {
-          Authorization: `Bearer ${localStorage.getItem("admin_token")}`,
-        },
+      const { data } = await axios.get(`${API_URL}/people/allPeople`, {
+        headers: { Authorization: `Bearer ${token}` },
       });
 
-      if (response.ok) {
-        const contentType = response.headers.get("content-type");
-        if (contentType && contentType.includes("application/json")) {
-          const result = await response.json();
-          setCashiers(result.data || []);
-        } else {
-          console.log("API Kasir tidak tersedia, menggunakan data kosong");
-          setCashiers([]);
-        }
-      } else {
-        console.log("Endpoint API Kasir tidak ditemukan");
-        setCashiers([]);
-      }
+     setCashiers(
+        (data?.data?.allPeople || []).map((p: any) => ({
+          id: p.id,
+          name: p.admin?.name || p.employee?.name || "No Name",
+          role: p.role,
+        }))
+      );
+
     } catch (error) {
       console.error("Error memuat kasir:", error);
       setCashiers([]);
     }
   };
 
+
+  const paymentMethodMap: Record<number, string> = {
+    1: "Cash",
+    2: "Transfer",
+    3: "Kredit", 
+  };
+
+// Load Daily Transactions
   const loadDailyTransactions = async (page: number = 1) => {
     setIsLoading(true);
-
     try {
-      const queryParams = new URLSearchParams({
-        startDate: filters.startDate,
-        endDate: filters.endDate,
-        page: page.toString(),
-        pageSize: pagination.itemsPerPage.toString(),
-        sortBy: filters.sortBy,
-        sortOrder: filters.sortOrder,
+      const { data } = await axios.get(`${API_URL}/report/RepDailyTransactions`, {
+        headers: { Authorization: `Bearer ${token}` }
       });
 
-      // Tambahkan filter ke query params
-      if (filters.categoryId) queryParams.append("categoryId", filters.categoryId);
-      if (filters.supplierId) queryParams.append("supplierId", filters.supplierId);
-      if (filters.itemId) queryParams.append("itemId", filters.itemId);
-      if (filters.paymentMethod !== "all") queryParams.append("paymentMethod", filters.paymentMethod);
-      if (filters.transactionType !== "all") queryParams.append("transactionType", filters.transactionType);
-      if (filters.cashierName) queryParams.append("cashierName", filters.cashierName);
-      if (filters.minAmount) queryParams.append("minAmount", filters.minAmount);
-      if (filters.maxAmount) queryParams.append("maxAmount", filters.maxAmount);
+      const apiData = data.data.repDailyTransac;
 
-      const response = await fetch(`/api/daily-transactions?${queryParams.toString()}`, {
-        headers: {
-          Authorization: `Bearer ${localStorage.getItem("admin_token")}`,
-        },
+      const mappedTransactions: DailyTransaction[] = apiData.data.map((tr: any) => ({
+        id: tr.outProductId.toString(),
+        transactionNumber: `TR-${tr.outProductId}`,
+        date: tr.purchaseDate,
+        time: new Date(tr.created_at).toLocaleTimeString("id-ID", { hour: '2-digit', minute: '2-digit' }),
+        cashierName: tr.users?.admin?.name || "-",
+        customerName: tr.member?.name || null,
+        subtotal: parseFloat(tr.subtotal),
+        discount: 0,
+        tax: 0,
+        totalAmount: parseFloat(tr.subtotal),
+        totalProfit: tr.items.reduce((sum: number, item: any) => sum + (parseFloat(item.price) - parseFloat(item.product.purchase_price)) * item.qty, 0),
+        paymentMethod: paymentMethodMap[tr.purchaseType] || "unknown",
+        transactionType: "sale",
+        amountPaid: parseFloat(tr.subtotal),
+        change: 0,
+        notes: "",
+        items: tr.items.map((item: any) => ({
+          id: item.outItemId.toString(),
+          itemName: item.product.name,
+          barcode: item.product.barcode,
+          categoryName: item.product.category.name,
+          supplierName: item.product.supplier_id.toString(),
+          quantity: item.qty,
+          unitPrice: parseFloat(item.price),
+          totalPrice: parseFloat(item.total),
+          costPrice: parseFloat(item.product.purchase_price),
+          profit: (parseFloat(item.price) - parseFloat(item.product.purchase_price)) * item.qty,
+          profitMargin: ((parseFloat(item.price) - parseFloat(item.product.purchase_price)) / parseFloat(item.price)) * 100
+        })),
+        createdAt: tr.created_at,
+        updatedAt: tr.updated_at,
+      }));
+
+      setTransactions(mappedTransactions);
+       setPagination({
+        currentPage: apiData.current_page,
+        totalPages: apiData.last_page,
+        totalItems: apiData.total,
+        itemsPerPage: apiData.per_page,
       });
-
-      if (response.ok) {
-        const contentType = response.headers.get("content-type");
-        if (contentType && contentType.includes("application/json")) {
-          const result = await response.json();
-          setTransactions(result.data || []);
-          setPagination(result.pagination || pagination);
-          setSummary(result.summary || summary);
-          setPeriods(result.periods || periods);
-        } else {
-          console.log("API Transaksi harian tidak tersedia, menggunakan data kosong");
-          setTransactions([]);
-          setPagination({
-            currentPage: 1,
-            totalPages: 1,
-            totalItems: 0,
-            itemsPerPage: 50,
-          });
-          setSummary({
-            totalTransactions: 0,
-            totalRevenue: 0,
-            totalProfit: 0,
-            totalQuantity: 0,
-            averageTransaction: 0,
-            averageProfitMargin: 0,
-            topSellingItems: [],
-            paymentMethodBreakdown: {
-              cash: { count: 0, amount: 0 },
-              transfer: { count: 0, amount: 0 },
-              credit: { count: 0, amount: 0 },
-            },
-            hourlyBreakdown: [],
-          });
-          setPeriods({
-            startDate: "",
-            endDate: "",
-            totalDays: 0,
-          });
-        }
-      } else {
-        console.log("Endpoint API Transaksi harian tidak ditemukan");
-        setTransactions([]);
-        setPagination({
-          currentPage: 1,
-          totalPages: 1,
-          totalItems: 0,
-          itemsPerPage: 50,
-        });
-        setSummary({
-          totalTransactions: 0,
-          totalRevenue: 0,
-          totalProfit: 0,
-          totalQuantity: 0,
-          averageTransaction: 0,
-          averageProfitMargin: 0,
-          topSellingItems: [],
-          paymentMethodBreakdown: {
-            cash: { count: 0, amount: 0 },
-            transfer: { count: 0, amount: 0 },
-            credit: { count: 0, amount: 0 },
-          },
-          hourlyBreakdown: [],
-        });
-        setPeriods({
-          startDate: "",
-          endDate: "",
-          totalDays: 0,
-        });
-      }
     } catch (error) {
-      console.error("Error memuat transaksi harian:", error);
+      console.error(error);
       setTransactions([]);
-      setPagination({
-        currentPage: 1,
-        totalPages: 1,
-        totalItems: 0,
-        itemsPerPage: 50,
-      });
-      setSummary({
-        totalTransactions: 0,
-        totalRevenue: 0,
-        totalProfit: 0,
-        totalQuantity: 0,
-        averageTransaction: 0,
-        averageProfitMargin: 0,
-        topSellingItems: [],
-        paymentMethodBreakdown: {
-          cash: { count: 0, amount: 0 },
-          transfer: { count: 0, amount: 0 },
-          credit: { count: 0, amount: 0 },
-        },
-        hourlyBreakdown: [],
-      });
-      setPeriods({
-        startDate: "",
-        endDate: "",
-        totalDays: 0,
-      });
     } finally {
       setIsLoading(false);
     }
   };
+
 
   const handleFilterChange = (key: keyof Filters, value: string) => {
     setFilters((prev) => ({ ...prev, [key]: value }));
@@ -560,9 +287,7 @@ const LaporanTransaksiHarianPage: React.FC = () => {
     loadDailyTransactions(1);
   };
 
-  const handlePageChange = (page: number) => {
-    loadDailyTransactions(page);
-  };
+
 
   const exportToCSV = async () => {
     setIsExporting(true);
@@ -770,7 +495,7 @@ const LaporanTransaksiHarianPage: React.FC = () => {
                   >
                     <option value="">Semua Kategori</option>
                     {categories.map((category) => (
-                      <option key={category.id} value={category.id}>
+                      <option key={category.categoryId} value={category.categoryId}>
                         {category.name}
                       </option>
                     ))}
@@ -860,91 +585,7 @@ const LaporanTransaksiHarianPage: React.FC = () => {
           )}
 
           {/* Summary Cards */}
-          <div className="px-6 py-4 bg-gray-50 border-b border-gray-200">
-            <div className="grid grid-cols-1 md:grid-cols-4 lg:grid-cols-4 gap-4">
-              <div className="bg-white p-4 rounded-lg border border-gray-200">
-                <div className="flex items-center">
-                  <Receipt className="w-8 h-8 text-blue-500" />
-                  <div className="ml-3">
-                    <p className="text-sm font-medium text-gray-600">Total Transaksi</p>
-                    <p className="text-lg font-semibold text-black">{summary.totalTransactions.toLocaleString("id-ID")}</p>
-                  </div>
-                </div>
-              </div>
-
-              <div className="bg-white p-4 rounded-lg border border-gray-200">
-                <div className="flex items-center">
-                  <DollarSign className="w-8 h-8 text-green-500" />
-                  <div className="ml-3">
-                    <p className="text-sm font-medium text-gray-600">Total Pendapatan</p>
-                    <p className="text-lg font-semibold text-black">Rp {summary.totalRevenue.toLocaleString("id-ID")}</p>
-                  </div>
-                </div>
-              </div>
-
-              <div className="bg-white p-4 rounded-lg border border-gray-200">
-                <div className="flex items-center">
-                  <TrendingUp className="w-8 h-8 text-purple-500" />
-                  <div className="ml-3">
-                    <p className="text-sm font-medium text-gray-600">Total Keuntungan</p>
-                    <p className="text-lg font-semibold text-black">Rp {summary.totalProfit.toLocaleString("id-ID")}</p>
-                  </div>
-                </div>
-              </div>
-
-              <div className="bg-white p-4 rounded-lg border border-gray-200">
-                <div className="flex items-center">
-                  <Package className="w-8 h-8 text-orange-500" />
-                  <div className="ml-3">
-                    <p className="text-sm font-medium text-gray-600">Total Barang</p>
-                    <p className="text-lg font-semibold text-black">{summary.totalQuantity.toLocaleString("id-ID")}</p>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mt-4">
-              <div className="bg-white p-4 rounded-lg border border-gray-200">
-                <div className="flex items-center">
-                  <DollarSign className="w-6 h-6 text-green-500" />
-                  <div className="ml-3">
-                    <p className="text-sm font-medium text-gray-600">Rata-rata Transaksi</p>
-                    <p className="text-base font-semibold text-black">Rp {summary.averageTransaction.toLocaleString("id-ID")}</p>
-                  </div>
-                </div>
-              </div>
-
-              <div className="bg-white p-4 rounded-lg border border-gray-200">
-                <div className="flex items-center">
-                  <TrendingUp className="w-6 h-6 text-blue-500" />
-                  <div className="ml-3">
-                    <p className="text-sm font-medium text-gray-600">Rata-rata Margin</p>
-                    <p className="text-base font-semibold text-black">{summary.averageProfitMargin.toFixed(1)}%</p>
-                  </div>
-                </div>
-              </div>
-
-              <div className="bg-white p-4 rounded-lg border border-gray-200">
-                <div className="flex items-center">
-                  <CreditCard className="w-6 h-6 text-purple-500" />
-                  <div className="ml-3">
-                    <p className="text-sm font-medium text-gray-600">Transaksi Tunai</p>
-                    <p className="text-base font-semibold text-black">{summary.paymentMethodBreakdown.cash.count}</p>
-                  </div>
-                </div>
-              </div>
-
-              <div className="bg-white p-4 rounded-lg border border-gray-200">
-                <div className="flex items-center">
-                  <Clock className="w-6 h-6 text-indigo-500" />
-                  <div className="ml-3">
-                    <p className="text-sm font-medium text-gray-600">Pendapatan Jam Puncak</p>
-                    <p className="text-base font-semibold text-black">{summary.hourlyBreakdown.length > 0 ? `Rp ${Math.max(...summary.hourlyBreakdown.map((h) => h.revenue)).toLocaleString("id-ID")}` : "Rp 0"}</p>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
+          <SummaryCardDailyTransac/>
 
           {/* Table */}
           <div className="overflow-x-auto">
@@ -1104,110 +745,13 @@ const LaporanTransaksiHarianPage: React.FC = () => {
           </div>
 
           {/* Pagination */}
-          {pagination.totalPages > 1 && (
-            <div className="px-6 py-4 border-t border-gray-200">
-              <div className="flex items-center justify-between">
-                <div className="text-sm text-gray-600">
-                  Menampilkan {(pagination.currentPage - 1) * pagination.itemsPerPage + 1} - {Math.min(pagination.currentPage * pagination.itemsPerPage, pagination.totalItems)} dari {pagination.totalItems} data
-                </div>
-                <div className="flex gap-2">
-                  <button
-                    onClick={() => handlePageChange(pagination.currentPage - 1)}
-                    disabled={pagination.currentPage <= 1}
-                    className="px-3 py-2 text-sm text-gray-700 border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    Sebelumnya
-                  </button>
+           <Pagination
+            currentPage={pagination.currentPage}
+            lastPage={pagination.totalPages}
+            onPageChange={(page) => loadDailyTransactions(page)}
+          />
 
-                  {Array.from({ length: Math.min(5, pagination.totalPages) }, (_, i) => {
-                    const page = pagination.currentPage - 2 + i;
-                    if (page < 1 || page > pagination.totalPages) return null;
-                    return (
-                      <button
-                        key={page}
-                        onClick={() => handlePageChange(page)}
-                        className={`px-3 py-2 text-sm border rounded-md ${page === pagination.currentPage ? "bg-blue-500 text-white border-blue-500" : "text-gray-700 border-gray-300 hover:bg-gray-50"}`}
-                      >
-                        {page}
-                      </button>
-                    );
-                  })}
 
-                  <button
-                    onClick={() => handlePageChange(pagination.currentPage + 1)}
-                    disabled={pagination.currentPage >= pagination.totalPages}
-                    className="px-3 py-2 text-sm text-gray-700 border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    Selanjutnya
-                  </button>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* Payment Method Breakdown */}
-          <div className="px-6 py-4 bg-blue-50 border-t border-gray-200">
-            <h3 className="text-sm font-medium text-gray-800 mb-3">Breakdown Metode Pembayaran</h3>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div className="bg-white p-3 rounded-lg border border-gray-200">
-                <div className="flex items-center gap-2">
-                  <div className="w-3 h-3 bg-green-500 rounded"></div>
-                  <span className="text-sm font-medium text-gray-700">Tunai</span>
-                </div>
-                <div className="mt-1">
-                  <div className="text-lg font-semibold text-black">{summary.paymentMethodBreakdown.cash.count}</div>
-                  <div className="text-xs text-gray-600">Rp {summary.paymentMethodBreakdown.cash.amount.toLocaleString("id-ID")}</div>
-                </div>
-              </div>
-
-              <div className="bg-white p-3 rounded-lg border border-gray-200">
-                <div className="flex items-center gap-2">
-                  <div className="w-3 h-3 bg-blue-500 rounded"></div>
-                  <span className="text-sm font-medium text-gray-700">Transfer</span>
-                </div>
-                <div className="mt-1">
-                  <div className="text-lg font-semibold text-black">{summary.paymentMethodBreakdown.transfer.count}</div>
-                  <div className="text-xs text-gray-600">Rp {summary.paymentMethodBreakdown.transfer.amount.toLocaleString("id-ID")}</div>
-                </div>
-              </div>
-
-              <div className="bg-white p-3 rounded-lg border border-gray-200">
-                <div className="flex items-center gap-2">
-                  <div className="w-3 h-3 bg-purple-500 rounded"></div>
-                  <span className="text-sm font-medium text-gray-700">Kredit</span>
-                </div>
-                <div className="mt-1">
-                  <div className="text-lg font-semibold text-black">{summary.paymentMethodBreakdown.credit.count}</div>
-                  <div className="text-xs text-gray-600">Rp {summary.paymentMethodBreakdown.credit.amount.toLocaleString("id-ID")}</div>
-                </div>
-              </div>
-            </div>
-
-            {/* Top Selling Items */}
-            {summary.topSellingItems.length > 0 && (
-              <div className="mt-6">
-                <h4 className="text-sm font-medium text-gray-800 mb-3">Barang Terlaris (Periode Ini)</h4>
-                <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
-                  <div className="space-y-2 p-3">
-                    {summary.topSellingItems.slice(0, 5).map((item, index) => (
-                      <div key={index} className="flex items-center justify-between py-1">
-                        <div className="flex items-center gap-3">
-                          <div className="w-6 h-6 bg-blue-100 rounded-full flex items-center justify-center">
-                            <span className="text-xs font-medium text-blue-800">{index + 1}</span>
-                          </div>
-                          <span className="text-sm font-medium text-gray-800">{item.itemName}</span>
-                        </div>
-                        <div className="text-right">
-                          <div className="text-sm font-semibold text-black">{item.quantity} unit</div>
-                          <div className="text-xs text-gray-600">Rp {item.revenue.toLocaleString("id-ID")}</div>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              </div>
-            )}
-          </div>
         </div>
       </div>
     </div>

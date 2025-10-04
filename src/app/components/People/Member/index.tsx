@@ -71,7 +71,7 @@ const AllMember: React.FC = () => {
             ) : (
               <table className="w-full table-auto border-collapse border border-gray-300 text-left">
                 <thead>
-                  <tr className="bg-gray-100">
+                  <tr className="bg-gray-100 text-gray-700">
                     <th className="border border-gray-300 px-4 py-2">Kode</th>
                     <th className="border border-gray-300 px-4 py-2">Region</th>
                     <th className="border border-gray-300 px-4 py-2">Nama</th>
@@ -83,7 +83,7 @@ const AllMember: React.FC = () => {
                 </thead>
                 <tbody>
                   {members.map((m) => (
-                    <tr key={m.memberId} className="hover:bg-gray-50">
+                    <tr key={m.memberId} className="hover:bg-gray-50 text-gray-700">
                       <td className="border border-gray-300 px-4 py-2">{m.memberCode}</td>
                       <td className="border border-gray-300 px-4 py-2">{m.region?.name || "-"} ({m.region?.code})</td>
                       <td className="border border-gray-300 px-4 py-2">{m.name}</td>

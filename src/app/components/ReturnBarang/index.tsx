@@ -95,10 +95,7 @@ const ReturnBarang: React.FC = () => {
   const handleNumberInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
 
-    // Remove leading zeros but keep single zero
     let cleanedValue = value.replace(/^0+/, "") || "0";
-
-    // If it's empty after removing leading zeros (except single zero), set to empty string
     if (cleanedValue === "0" && value !== "0") {
       cleanedValue = "";
     }
@@ -108,7 +105,6 @@ const ReturnBarang: React.FC = () => {
       [name]: cleanedValue === "" ? 0 : Number(cleanedValue),
     }));
 
-    // Clear errors when user starts typing
     if (submitError) setSubmitError("");
     if (submitSuccess) setSubmitSuccess("");
   };

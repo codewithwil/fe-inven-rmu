@@ -7,43 +7,36 @@ import { useDebounce } from "../../hooks/useDebounce";
 import Swal from "sweetalert2";
 import "sweetalert2/dist/sweetalert2.min.css";
 
-export interface Member {
+interface Member {
   memberId: number;
   memberCode: string;
   name: string;
   phone: string;
-  points?: number;
 }
 
-export interface Product {
-  productId: number;
-  name: string;
-  barcode: string;
-  sku: string;
+interface Payment {
+  payAmountId: number;
+  amount: string;
+  date: string;
+  paymentType: number;
 }
 
-export interface OutItem {
-  outItemId: number;
-  qty: number;
-  price: string;
-  total: string;
-  product: Product;
-}
-
-export interface OutProduct {
-  outProductId: number;
-  member_id: number;
-  purchaseDate: string;
-  purchaseType: number;
-  subtotal: string;
+export interface Debt {
+  debtId: number;
+  partner_id: number;
+  amount: string;
+  paid: string;
+  status: number;
   created_at: string;
-  member: Member;
-  items: OutItem[];
+  updated_at: string;
+  total_paid: string;
+  partner: Member;
+  payments: Payment[];
 }
 
 interface PaginationMeta {
   current_page: number;
-  data: OutProduct[];
+  data: Debt[];
   last_page: number;
   per_page: number;
   total: number;
@@ -51,79 +44,57 @@ interface PaginationMeta {
   to: number;
 }
 
-const AllTransactionsList: React.FC<{ onEdit: (trx: OutProduct) => void }> = ({ onEdit }) => {
-  const [outProducts, setOutProducts] = useState<OutProduct[]>([]);
+interface Props {
+  onEdit: (trx: Debt) => void;
+}
+
+const AllPiutangMember: React.FC<Props> = ({ onEdit }) => {
+  const [debts, setDebts] = useState<Debt[]>([]);
   const [pagination, setPagination] = useState<PaginationMeta | null>(null);
   const [page, setPage] = useState(1);
   const [searchTerm, setSearchTerm] = useState("");
   const debouncedSearch = useDebounce(searchTerm, 500);
 
-  const API_URL = process.env.NEXT_PUBLIC_API_URL + "/transactions/outProduct";
+  const API_URL = process.env.NEXT_PUBLIC_API_URL + "/transactions/receivableMember";
   const token = localStorage.getItem("admin_token");
 
-  const fetchOutProducts = async () => {
+  const fetchDebts = async () => {
     try {
       const res = await axios.get(
         `${API_URL}?page=${page}&search=${debouncedSearch}`,
         { headers: { Authorization: `Bearer ${token}` } }
       );
 
-      const data: PaginationMeta = res.data.data.returns;
-      setOutProducts(data.data);
-      setPagination(data);
+      // res.data.data.debts adalah objek paginasi
+      const paginationData = res.data.data.debts;
+      setDebts(paginationData.data); // array Debt
+      setPagination({
+        current_page: paginationData.current_page,
+        last_page: paginationData.last_page,
+        per_page: paginationData.per_page,
+        total: paginationData.total,
+        from: paginationData.from,
+        to: paginationData.to,
+        data: paginationData.data,
+      });
     } catch (error) {
       console.error("Error fetching:", error);
     }
   };
 
+
   useEffect(() => {
-    fetchOutProducts();
+    fetchDebts();
   }, [page, debouncedSearch]);
 
-  const getPurchaseType = (type: number) => {
-    switch (type) {
-      case 1: return "CASH";
-      case 2: return "TRANSFER";
-      case 3: return "HUTANG";
-      default: return "LAINNYA";
-    }
-  };
-
-  const handlePrint = async (out: OutProduct) => {
-
-    const url =
-      out.purchaseType === 3
-        ? `${process.env.NEXT_PUBLIC_API_URL}/transactions/outProduct/printInvoice/${out.outProductId}`
-        : `${process.env.NEXT_PUBLIC_API_URL}/transactions/outProduct/printReceipt/${out.outProductId}`;
-
-    try {
-      const res = await fetch(url, {
-        method: "GET",
-        headers: {
-          Accept: "application/pdf",
-          Authorization: `Bearer ${localStorage.getItem("admin_token")}`,
-        },
-      });
-
-      if (!res.ok) {
-        throw new Error("Gagal download PDF");
-      }
-
-      const blob = await res.blob();
-      const fileURL = window.URL.createObjectURL(blob);
-
-      window.open(fileURL, "_blank");
-
-    } catch (err) {
-      console.error(err);
-      alert("Terjadi kesalahan saat mengambil PDF");
-    }
+  const getStatus = (status: number) => {
+    return status === 1 ? "LUNAS" : "BELUM LUNAS";
   };
 
   const handleDelete = async (id: number) => {
     const result = await Swal.fire({
       title: "Yakin hapus?",
-      text: "Transaksi ini akan dihapus permanen.",
+      text: "Piutang ini akan dihapus permanen.",
       icon: "warning",
       showCancelButton: true,
       confirmButtonColor: "#d33",
@@ -136,26 +107,26 @@ const AllTransactionsList: React.FC<{ onEdit: (trx: OutProduct) => void }> = ({ 
 
     try {
       await axios.post(
-        `${process.env.NEXT_PUBLIC_API_URL}/transactions/outProduct/delete/${id}`,
+        `${API_URL}/delete/${id}`,
         {},
-        { headers: { Authorization: `Bearer ${localStorage.getItem("admin_token")}` } }
+        { headers: { Authorization: `Bearer ${token}` } }
       );
 
       Swal.fire({
         icon: "success",
         title: "Berhasil",
-        text: "Transaksi berhasil dihapus",
+        text: "Piutang berhasil dihapus",
         timer: 2000,
         showConfirmButton: false,
       });
 
-      fetchOutProducts();
+      fetchDebts();
     } catch (error) {
-      console.error("Gagal hapus transaksi:", error);
+      console.error("Gagal hapus piutang:", error);
       Swal.fire({
         icon: "error",
         title: "Gagal",
-        text: "Terjadi kesalahan saat menghapus transaksi",
+        text: "Terjadi kesalahan saat menghapus piutang",
       });
     }
   };
@@ -164,10 +135,10 @@ const AllTransactionsList: React.FC<{ onEdit: (trx: OutProduct) => void }> = ({ 
     <div className="p-6">
       <div className="bg-white rounded-lg shadow-sm border border-gray-200">
         <div className="px-6 py-4 border-b border-gray-200 flex justify-between items-center">
-          <h2 className="text-xl font-semibold text-gray-800">Daftar Transaksi Produk</h2>
+          <h2 className="text-xl font-semibold text-gray-800">Daftar Piutang Member</h2>
           <input
             type="text"
-            placeholder="Cari member/produk..."
+            placeholder="Cari member..."
             value={searchTerm}
             onChange={(e) => { setPage(1); setSearchTerm(e.target.value); }}
             className="border border-gray-300 rounded-lg px-3 py-1 text-sm focus:ring focus:ring-blue-200"
@@ -180,65 +151,51 @@ const AllTransactionsList: React.FC<{ onEdit: (trx: OutProduct) => void }> = ({ 
               <tr className="bg-gray-100 text-gray-700">
                 <th className="px-4 py-3 border">No</th>
                 <th className="px-4 py-3 border">Member</th>
-                <th className="px-4 py-3 border">Produk</th>
-                <th className="px-4 py-3 border">Subtotal</th>
-                <th className="px-4 py-3 border">Jenis</th>
+                <th className="px-4 py-3 border">Total Hutang</th>
+                <th className="px-4 py-3 border">Terbayar</th>
+                <th className="px-4 py-3 border">Status</th>
                 <th className="px-4 py-3 border">Tanggal</th>
                 <th className="px-4 py-3 border text-center">Aksi</th>
               </tr>
             </thead>
             <tbody>
-              {outProducts.length === 0 ? (
+              {debts.length === 0 ? (
                 <tr>
                   <td colSpan={7} className="text-center text-gray-500 py-6">
-                    Belum ada data transaksi.
+                    Belum ada data piutang.
                   </td>
                 </tr>
               ) : (
-                outProducts.map((out, index) => (
+                debts.map((debt, index) => (
                   <tr
-                    key={out.outProductId}
+                    key={debt.debtId}
                     className={index % 2 === 0 ? "bg-white" : "bg-gray-50"}
                   >
                     <td className="px-4 py-3 border text-gray-700">
                       {pagination?.from ? pagination.from + index : index + 1}
                     </td>
                     <td className="px-4 py-3 border">
-                      <div className="font-medium text-gray-800">{out.member?.name}</div>
-                      <div className="text-xs text-gray-500">{out.member?.memberCode}</div>
+                      <div className="font-medium text-gray-800">{debt.partner?.name}</div>
+                      <div className="text-xs text-gray-500">{debt.partner?.memberCode}</div>
                     </td>
-                    <td className="px-4 py-3 border">
-                      {out.items.map(item => (
-                        <div key={item.outItemId} className="text-gray-700">
-                          {item.product?.name} ({item.qty} x Rp{item.price})
-                        </div>
-                      ))}
-                    </td>
-                    <td className="px-4 py-3 border font-semibold text-gray-800">
-                      Rp {out.subtotal}
-                    </td>
-                    <td className="px-4 py-3 border">{getPurchaseType(out.purchaseType)}</td>
-                    <td className="px-4 py-3 border">
-                      {new Date(out.purchaseDate).toLocaleString("id-ID")}
+                    <td className="px-4 py-3 border text-gray-700">Rp {debt.amount}</td>
+                    <td className="px-4 py-3 border text-gray-700">Rp {debt.paid}</td>
+                    <td className="px-4 py-3 border text-gray-700">{getStatus(debt.status)}</td>
+                    <td className="px-4 py-3 border text-gray-700">
+                      {new Date(debt.created_at).toLocaleDateString("id-ID")}
                     </td>
                     <td className="px-4 py-3 border text-center space-x-2">
                       <button
-                        onClick={() => onEdit(out)}
+                        onClick={() => onEdit(debt)}
                         className="px-3 py-1 text-sm bg-yellow-500 hover:bg-yellow-600 text-white rounded"
                       >
                         Edit
                       </button>
                       <button
-                        onClick={() => handleDelete(out.outProductId)}
+                        onClick={() => handleDelete(debt.debtId)}
                         className="px-3 py-1 text-sm bg-red-500 hover:bg-red-600 text-white rounded"
                       >
                         Hapus
-                      </button>
-                      <button
-                        onClick={() => handlePrint(out)}
-                        className="px-3 py-1 text-sm bg-blue-500 hover:bg-blue-600 text-white rounded"
-                      >
-                        Print
                       </button>
                     </td>
                   </tr>
@@ -262,4 +219,4 @@ const AllTransactionsList: React.FC<{ onEdit: (trx: OutProduct) => void }> = ({ 
   );
 };
 
-export default AllTransactionsList;
+export default AllPiutangMember;

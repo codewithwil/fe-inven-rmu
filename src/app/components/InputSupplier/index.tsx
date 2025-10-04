@@ -77,7 +77,7 @@ const InputSupplierStep: React.FC = () => {
 
   const [step, setStep] = useState<number>(1);
   const API_URL = process.env.NEXT_PUBLIC_API_URL + "/resources/supplier";
-  const token = localStorage.getItem("admin_token");
+  const token   = localStorage.getItem("admin_token");
 
   const fetchSuppliers = async () => {
     setLoading(true);
@@ -436,7 +436,7 @@ const InputSupplierStep: React.FC = () => {
             ) : (
               <table className="w-full table-auto border-collapse text-sm">
                 <thead>
-                  <tr className="bg-gray-100">
+                  <tr className="bg-gray-100 text-gray-700">
                     <th className="border px-3 py-2">No</th>
                     <th className="border px-3 py-2">Kode</th>
                     <th className="border px-3 py-2">Nama</th>
@@ -447,7 +447,7 @@ const InputSupplierStep: React.FC = () => {
                 </thead>
                 <tbody>
                   {filteredSuppliers.map((sup, idx) => (
-                    <tr key={sup.supplierId} className="hover:bg-gray-50">
+                    <tr key={sup.supplierId} className="hover:bg-gray-50 text-gray-700">
                       <td className="border px-3 py-2">{(pagination?.from || 0) + idx + 1}</td>
                       <td className="border px-3 py-2">{sup.supplierUniqueId || sup.suppliercode}</td>
                       <td className="border px-3 py-2">{sup.name}</td>

@@ -204,7 +204,7 @@ const fetchCategories = async () => {
             ) : (
               <table className="w-full table-auto border-collapse border border-gray-300 text-left">
                 <thead>
-                  <tr className="bg-gray-100">
+                  <tr className="bg-gray-100 text-gray-700">
                     <th className="border border-gray-300 px-4 py-2">No</th>
                     <th className="border border-gray-300 px-4 py-2">
                       Nama Kategori
@@ -216,7 +216,7 @@ const fetchCategories = async () => {
                 </thead>
                 <tbody>
                   {filteredCategories.map((cat, index) => (
-                    <tr key={cat.categoryId} className="hover:bg-gray-50">
+                    <tr key={cat.categoryId} className="hover:bg-gray-50 text-gray-700">
                       <td className="border border-gray-300 px-4 py-2">
                         {(pagination.from || 1) + index}
                       </td>

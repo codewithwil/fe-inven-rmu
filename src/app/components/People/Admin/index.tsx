@@ -257,7 +257,7 @@ const InputAdmin: React.FC = () => {
             ) : (
               <table className="w-full table-auto border-collapse border border-gray-300 text-left">
                 <thead>
-                  <tr className="bg-gray-100">
+                  <tr className="bg-gray-100 text-gray-700">
                     <th className="border border-gray-300 px-4 py-2">No</th>
                     <th className="border border-gray-300 px-4 py-2">Nama</th>
                     <th className="border border-gray-300 px-4 py-2">Email</th>
@@ -269,7 +269,7 @@ const InputAdmin: React.FC = () => {
                 </thead>
                 <tbody>
                   {filteredAdmins.map((admin, index) => (
-                    <tr key={admin.adminId} className="hover:bg-gray-50">
+                    <tr key={admin.adminId} className="hover:bg-gray-50 text-gray-700">
                       <td className="border border-gray-300 px-4 py-2">
                         {(pagination?.from || 0) + index}
                       </td>

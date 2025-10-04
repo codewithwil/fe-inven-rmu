@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
+import axios from "axios";
 
 interface DashboardData {
   hutang: {
@@ -30,16 +31,16 @@ interface DashboardOverviewProps {
 const DashboardOverview: React.FC<DashboardOverviewProps> = ({ onNavigate }) => {
   const [dashboardData, setDashboardData] = useState<DashboardData>({
     hutang: {
-      totalHutang: 52500000,
-      itemJatuhTempo: 2,
-      totalOverdue: 28000000,
-      supplierCount: 6,
+      totalHutang: 0,
+      itemJatuhTempo: 0,
+      totalOverdue: 0,
+      supplierCount: 0,
     },
     piutang: {
-      totalPiutang: 12216000,
-      anggotaNunggak: 3,
-      totalNunggak: 6266500,
-      anggotaAktif: 6,
+      totalPiutang: 0,
+      anggotaNunggak: 0,
+      totalNunggak: 0,
+      anggotaAktif: 0,
     },
     transaksiHarian: {
       transaksiHariIni: 0,
@@ -50,39 +51,68 @@ const DashboardOverview: React.FC<DashboardOverviewProps> = ({ onNavigate }) => 
   });
   const [isLoading, setIsLoading] = useState(false);
 
+  const API_URL = process.env.NEXT_PUBLIC_API_URL + "/dashboard";
+  const token = typeof window !== "undefined" ? localStorage.getItem("admin_token") : null;
+
   useEffect(() => {
     loadDashboardData();
   }, []);
 
   const loadDashboardData = async () => {
+    if (!token) return;
     setIsLoading(true);
+
     try {
-      // Load hutang data
-      const hutangResponse = await fetch("/api/supplier-debts", {
-        headers: { Authorization: `Bearer ${localStorage.getItem("admin_token")}` },
-      });
+      const headers = { Authorization: `Bearer ${token}` };
 
-      // Load piutang data
-      const piutangResponse = await fetch("/api/anggota-piutang", {
-        headers: { Authorization: `Bearer ${localStorage.getItem("admin_token")}` },
-      });
+      const [debtRes, receivableRes, incomeDayRes, transacDayRes] = await Promise.all([
+        axios.get(`${API_URL}/getTotalDebt`, { headers }),
+        axios.get(`${API_URL}/getReceivable`, { headers }),
+        axios.get(`${API_URL}/getIncomeDay`, { headers }),
+        axios.get(`${API_URL}/getTransacDay`, { headers }),
+      ]);
 
-      // Load transaksi harian data
-      const today = new Date().toISOString().split("T")[0];
-      const transaksiResponse = await fetch(`/api/daily-transactions?startDate=${today}&endDate=${today}`, {
-        headers: { Authorization: `Bearer ${localStorage.getItem("admin_token")}` },
-      });
+      const debtData = debtRes.data?.data?.getTotalDebt ?? {
+        totalDebt: 0,
+        itemsDue: 0,
+        totalOverdue: 0,
+        supplierCount: 0,
+      };
 
-      // Use demo data if API not available
-      if (!hutangResponse.ok || !piutangResponse.ok || !transaksiResponse.ok) {
-        console.log("Using demo data for dashboard");
-      }
+      const receivableData = receivableRes.data?.data?.getReceivable ?? {
+        totalPiutang: 0,
+        anggotaNunggak: 0,
+        totalNunggak: 0,
+        memberActive: 0,
+      };
+
+      setDashboardData({
+        hutang: {
+          totalHutang: debtData.totalDebt,
+          itemJatuhTempo: debtData.itemsDue,
+          totalOverdue: debtData.totalOverdue,
+          supplierCount: debtData.supplierCount,
+        },
+        piutang: {
+          totalPiutang: receivableData.totalPiutang,
+          anggotaNunggak: receivableData.anggotaNunggak,
+          totalNunggak: receivableData.totalNunggak,
+          anggotaAktif: receivableData.memberActive,
+        },
+        transaksiHarian: {
+          transaksiHariIni: transacDayRes.data?.data?.getTransacDay.totalTransaksi ?? 0,
+          pendapatanHariIni: incomeDayRes.data?.data?.getIncomeDay?.revenue ?? 0,
+          keuntunganHariIni: incomeDayRes.data?.data?.getIncomeDay?.profit ?? 0,
+          itemTerjual: transacDayRes.data?.data?.getTransacDay.itemTerjual ?? 0,
+        },
+      });
     } catch (error) {
-      console.error("Error loading dashboard data:", error);
+      console.error("Gagal load dashboard:", error);
     } finally {
       setIsLoading(false);
     }
   };
+
 
   return (
     <div className="space-y-6">
